@@ -1,0 +1,10 @@
+# renders and caches
+*.mp4
+.hyperframes/
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+# claude plugin eval output
+evals/results/

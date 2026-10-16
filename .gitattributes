@@ -1,0 +1,16 @@
+# Text files are stored with LF everywhere (bash scripts break with CRLF).
+* text=auto eol=lf
+*.sh text eol=lf
+skills/code-cartoon/scripts/cartoon text eol=lf
+
+# Binary assets
+*.woff2 binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.webp binary
+*.mp4 binary
+*.wav binary
+*.mp3 binary
+*.min.js -diff linguist-vendored

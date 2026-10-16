@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg shellcheck
+      - name: Python packages
+        run: pip install numpy scipy pillow
+      - name: shellcheck
+        run: shellcheck --severity=warning skills/code-cartoon/scripts/*.sh skills/code-cartoon/scripts/cartoon
+      - name: Python syntax
+        run: python -m py_compile skills/code-cartoon/scripts/*.py
+      - name: Skill self-check
+        run: skills/code-cartoon/scripts/cartoon selfcheck
+      - name: Plugin and marketplace manifests
+        run: npx --yes @anthropic-ai/claude-code plugin validate . --strict
+
+  render:
+    needs: checks
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        template: [2d, 3d, photo3d]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Python packages
+        run: pip install numpy scipy pillow
+      - name: Headless Chrome for HyperFrames
+        run: npx --yes hyperframes@0.8.164 browser ensure
+      - name: New project
+        run: skills/code-cartoon/scripts/cartoon new "$RUNNER_TEMP/p" --template ${{ matrix.template }} --format 16:9 --duration 3 --title CI
+      - name: Lint and render
+        working-directory: ${{ runner.temp }}/p
+        run: |
+          "$GITHUB_WORKSPACE/skills/code-cartoon/scripts/cartoon" lint
+          "$GITHUB_WORKSPACE/skills/code-cartoon/scripts/cartoon" render --fps 24 --quality draft --output out.mp4
+      - name: Check the file
+        working-directory: ${{ runner.temp }}/p
+        run: |
+          "$GITHUB_WORKSPACE/skills/code-cartoon/scripts/cartoon" check out.mp4 --duration 3 --fps 24 --size 1920x1080
+          "$GITHUB_WORKSPACE/skills/code-cartoon/scripts/cartoon" frames out.mp4 --jumps --cues cues.js
+          "$GITHUB_WORKSPACE/skills/code-cartoon/scripts/cartoon" sheet out.mp4 -n 6
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: render-${{ matrix.template }}
+          path: |
+            ${{ runner.temp }}/p/out.mp4
+            ${{ runner.temp }}/p/out.sheet.jpg
+          if-no-files-found: ignore
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: FFmpeg
+        run: choco install ffmpeg -y --no-progress
+      - name: Python packages
+        run: pip install numpy scipy pillow
+      - name: Skill self-check (Git Bash)
+        run: skills/code-cartoon/scripts/cartoon selfcheck

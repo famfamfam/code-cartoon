@@ -1,0 +1,43 @@
+# Recipes
+
+Tested story patterns. Each names the parts to reuse; look at the bundled examples for working code.
+
+## Bring a child's drawing to life
+The child must recognise **their** drawing and **themselves**.
+1. Ask for a photo of the drawing and (optionally) of the child; ask who and what is in the drawing.
+   Never upload or publish these photos.
+2. Choose the way:
+   - **2D retelling** (template 2d): redraw the drawing with `pen.crayon` + `pen.marker` in a
+     `Sketch.cache(..., { palette: "crayon" })`, objects at the same places as on the photo (measure
+     them). The child appears as a drawn character with their recognisable traits (hair, clothes,
+     a favourite toy). Example of the drawing technique: `cartoon example crayon-drawing`.
+   - **Photo + 3D** (template photo3d): the real photo of the child, the real drawing popping up from
+     a bench, a dive into a 3D world in the drawing's colours, the child's real face in a window or
+     porthole (`cartoon photo --face`), back to the photo with a souvenir. `cartoon example photo3d-popup`.
+3. The twist is the moment the drawing comes alive: it starts to boil, stars lift off the page, the
+   camera dives in. Everything the child drew must appear in the story.
+4. End on the child with a souvenir from the drawing (a star, a toy) and a warm poster line.
+
+## Dive into a picture (one world inside another)
+- The picture inside the first world is a cached canvas; push the camera into it with
+  `Sketch.cam.keys` (zoom 1 -> 5+, ease `in`).
+- At the moment the picture fills the frame, switch the world at the **same geometry** (the second
+  world uses the picture's layout scaled up), under an iris or a short flash.
+- Line widths follow the zoom (`zoomComp`); the picture is a raster and scales like paper.
+
+## Two worlds (sketch -> print, yard -> fairy tale)
+- `Sketch.sequence` with one scene per world; same layout, different palette, pens and music mood.
+- The iris opens from the centre; the incoming world gets its own paper.
+- The palette swap is the twist: cold pencil before, warm colour after. Example: `cartoon example lubok-sun-ship`.
+
+## Photo + 3D story
+- Real photo (living camera, leaves) -> the picture on a surface -> pop-ups -> push into the hero card ->
+  gold flash -> 3D world -> flash -> the photo again with a glowing souvenir -> poster.
+- Twist = the dive (35–45 %). The 3D world is toy-like on purpose: the realism is the photo.
+- Narration: `voice` cues + `cartoon voice --fit` + `cartoon audio`.
+
+## A reel cut to their song
+- Put the song in `audio/`, `cartoon beats audio/song.mp3 --snap cues.js --grid bar --twist`.
+- Look at `song.beats.png`: bars, energy, the twist candidate (the strongest rise in the middle).
+- Events marked `"snap": "beat"` or `"bar"` move onto the grid; the twist lands on the drop.
+- `cartoon audio` mixes the song with soft effects (synthesized music is switched off).
