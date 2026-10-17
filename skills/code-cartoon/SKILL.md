@@ -40,7 +40,8 @@ commands from inside the project directory.
 | `cartoon beats song.mp3 [--snap cues.js]` | tempo, beats, bars, energy, twist candidate; snap events to the grid |
 | `cartoon check out.mp4 --duration L --fps 24 --size WxH` | delivery check: length, fps, size, loudness, first/last frame |
 | `cartoon sheet out.mp4 -n 12` | contact sheet with time codes and the Reels interface zone |
-| `cartoon frames out.mp4 --zoom X,Y,W,H --at ...` / `--twitch ...` / `--jumps --cues cues.js` | look closer: crops, twitching details, unplanned jumps |
+| `cartoon frames out.mp4 --zoom X,Y,W,H --at ...` / `--twitch ...` / `--jumps --cues cues.js` | look closer: crops, twitching details, unplanned jumps and cuts that settle |
+| `cartoon frames out.mp4 --around 117.6,124.5` | every drawing around each time (look at every cut this way) |
 | `cartoon analyze ref.mp4 -o refs/analysis/ref1` | a reference video in numbers |
 | `cartoon roto clip.mp4 . --name hero` | hybrid: video -> line drawings per frame |
 | `cartoon photo . --photo p.jpg --image drawing.jpg [--face X,Y,R]` | prepare photo3d pictures |
@@ -123,11 +124,20 @@ real photo + 3D: `--template photo3d`). Put the storyboard timing into `cues.js`
    in 9:16 keep the bottom 15 % empty (Reels/Shorts interface).
 8. Several worlds (pencil -> print, yard -> space): `Sketch.sequence` with one palette and camera per scene;
    never switch palettes by hand inside a cached drawing (pitfalls).
+9. **Cuts without jerks.** A cut is one changed frame; the drawings right after it are as calm as any others.
+   - One path and one camera per shot, chosen once per drawing. A path that switches its formula by time
+     (`floor(t / phrase)`) jumps at the cut, and everything that looks at a window of time around `t`
+     sees the jump: speed, bank, a lagging camera, trails.
+   - The camera's subject comes from the plan of the shot, never from a condition such as "whoever is
+     behind now". A condition flips at random moments, and every flip is an unplanned cut.
+   - A shot ends while its action is in the frame; the next shot starts with what the last one ended on.
+   - Planned cuts and flashes go into `cues.js` as events (`"type": "none"`, a flash with its `dur`).
 
 ### 5. Check the frames yourself before showing anything
 `cartoon lint`, then `cartoon snapshot --at 0,<phases>,<twist-0.05>,<twist+0.1>,<poster>,<end>`.
 Open `contact-sheet.jpg` and 2–3 frames at full size. For faces, eyes, small text and logos use
 `cartoon frames out.mp4 --zoom X,Y,W,H --at ...` and `--twitch` on what must hold still.
+Look at every camera cut drawing by drawing: `cartoon frames out.mp4 --around <cut times>`.
 Check by `references/qa.md`: the story reads without sound; text is big and not covered; the first frame
 is not empty, the last one is a poster; nothing jumps that should stand; the frame is not overloaded.
 A frame frozen from some time on (or an empty world) means the scene threw an exception: run
@@ -153,6 +163,8 @@ cartoon check out.mp4 --duration <L> --fps 24 --size 1080x1920
 cartoon frames out.mp4 --jumps --cues cues.js
 cartoon sheet out.mp4 -n 12
 ```
+Look at every flag of `--jumps` with `--around` before calling it "just a camera cut". A cut that is
+not in `cues.js` is unplanned, and "N big changes in 0.3 s" is a glitch.
 A clip: render the cut first (`cartoon cut reel --auto --format 9:16`, then render inside `cuts/reel`),
 the full song takes ~4 min per minute of video.
 Look at `out.first.png`, `out.last.png` and the sheet. Hand over: the MP4 path, the story second by

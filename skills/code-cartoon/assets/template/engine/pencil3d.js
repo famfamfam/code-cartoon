@@ -8,10 +8,12 @@
  *   M.decal(partName, polygon3d, "red");  M.done();
  *   const cam = P3.camera(eye, target, fovDeg);
  *   P3.draw(d, cam, [P3.object(M, pos, P3.attitude(fwd, up, roll), scale, opts), P3.puff(pos, r, opts), ...], world)
- *   P3.flight(path, t) -> { pos, vel, att } of a path(t) -> [x, y, z] (banked by its sideways acceleration)
+ *   P3.flight(path, t) -> { pos, vel, att } of a path(t) -> [x, y, z] (banked by its sideways acceleration;
+ *     its time window stops where the path jumps: P3.span);  P3.lag(fn, t, span, from) -> a camera aim that lags
  *   P3.track(t0, dt, rows) -> a path from simulated samples, with .flight(t) (see references/pencil3d.md)
  *   P3.cumulus(base, w, h, seed, o) -> puffs of a cumulus cloud;  P3.line(c, d, cam, pts, o) -> trails, tracers
- * World: Y is up, metres. world = { sun: unit vector toward the sun, shadow: hex, ink: role, hatch: role, ambient }.
+ * World: Y is up, metres. world = { sun: unit vector toward the sun, shadow: hex, ink: role, hatch: role, ambient,
+ *   keep: [points the shot is about: puffs between them and the camera fade] }.
  * Load after engine/sketch.js; build meshes and clouds that need colours AFTER Sketch.mount (the palette is set there).
  * ==========================================================================*/
 (function (global) {
@@ -138,17 +140,43 @@
     return { f, u, r };
   };
   /** bank from the path: the lift (up) leans into the turn; path(t) -> [x, y, z] */
-  P3.flight = function (path, t, o = {}) {
-    const e = o.dt ?? 0.05, a = path(t - e), b = path(t), c = path(t + e);
-    const v = mul(sub(c, a), 1 / (2 * e)), f = norm(v);
-    // the lift, averaged over a short window: where it passes through zero (the slow top of a loop) the plane
-    // rolls over smoothly instead of flipping in one drawing; gravity counts weakly (cartoon physics)
-    const g = o.g ?? 3, win = o.win ?? 0.25;
-    let lift = [0, 0, 0];
-    for (let j = -3; j <= 3; j++) {
-      const tt = t + (j * win) / 3, p0 = path(tt - e), p1 = path(tt), p2 = path(tt + e), w = 1 - Math.abs(j) / 4;
-      lift = add(lift, mul(add(mul(add(sub(p2, p1), sub(p0, p1)), 1 / (e * e)), [0, g, 0]), w));
+  /** the stretch of time around t where the path is continuous: [lo, hi] within t +- reach. A path that jumps
+   *  (a new shot, a new pass, a teleport) is not a turn: whatever looks at a window of time (speed, bank, a camera
+   *  that lags) must stop at the jump, or the plane turns sideways and the camera swings for a few drawings around
+   *  every cut. o.from / o.to: the shot's own bounds, if known. */
+  P3.span = function (path, t, reach, o = {}) {
+    const d = 0.002, ref = Math.min(len(sub(path(t), path(t - d))), len(sub(path(t + d), path(t)))) / d;
+    const lim = 4 * ref + 5, n = 8;
+    let lo = t - reach, hi = t + reach;
+    for (const s of [-1, 1]) {                       // walk out from t; stop before the first step faster than 4x the speed
+      let prev = t, pp = path(t);
+      for (let i = 1; i <= n; i++) {
+        const tt = t + (s * reach * i) / n, q = path(tt);
+        if (len(sub(q, pp)) / Math.abs(tt - prev) > lim) { if (s < 0) lo = prev; else hi = prev; break; }
+        prev = tt; pp = q;
+      }
     }
+    if (o.from !== undefined) lo = Math.max(lo, Math.min(t, o.from));
+    if (o.to !== undefined) hi = Math.min(hi, Math.max(t, o.to));
+    return [lo, hi];
+  };
+  P3.flight = function (path, t, o = {}) {
+    const e = o.dt ?? 0.05, g = o.g ?? 3, win = o.win ?? 0.25;
+    const [lo, hi] = P3.span(path, t, win + e, o), at = (tt) => path(Math.min(hi, Math.max(lo, tt)));
+    const ta = Math.max(lo, t - e), tc = Math.min(hi, t + e), b = path(t);
+    const v = tc - ta > 1e-4 ? mul(sub(at(tc), at(ta)), 1 / (tc - ta)) : sub(path(t + 0.001), b), f = norm(v);
+    // the lift, averaged over a short window: where it passes through zero (the slow top of a loop) the plane
+    // rolls over smoothly instead of flipping in one drawing; gravity counts weakly (cartoon physics).
+    // Only samples inside the continuous stretch count.
+    let lift = [0, 0, 0], wsum = 0;
+    for (let j = -3; j <= 3; j++) {
+      const tt = t + (j * win) / 3, w = 1 - Math.abs(j) / 4;
+      if (tt - e < lo - 1e-9 || tt + e > hi + 1e-9) continue;
+      const p0 = path(tt - e), p1 = path(tt), p2 = path(tt + e);
+      lift = add(lift, mul(add(mul(add(sub(p2, p1), sub(p0, p1)), 1 / (e * e)), [0, g, 0]), w));
+      wsum += w;
+    }
+    lift = wsum > 0 ? mul(lift, 4 / wsum) : [0, 4 * g, 0];
     // the bank comes from the sideways part of the turn only, limited to +-80 degrees: a plane never goes upside
     // down by itself (a pull or a push only pitches it), so it cannot flip over; a roll is added on purpose (o.roll)
     let r0 = cross(f, [0, 1, 0]);
@@ -157,6 +185,14 @@
     const bank = 1.35 * Math.tanh(lat / (o.bankK ?? 35));    // smooth in the sideways acceleration, at most ~77 degrees
     const up = add(mul(u0, Math.cos(bank)), mul(r0, Math.sin(bank)));
     return { pos: b, vel: v, att: P3.attitude(f, norm(up), o.roll || 0) };
+  };
+  /** a camera that lags: the mean of fn (a point, or anything that returns [x, y, z]) over the last `span` seconds,
+   *  never before `from` (the start of the shot). A chase camera aims at P3.lag(...) so a target that crosses close in
+   *  front does not swing the frame in one drawing. Pure function of t. */
+  P3.lag = function (fn, t, span = 0.4, from = -Infinity, n = 8) {
+    let acc = [0, 0, 0];
+    for (let i = 0; i < n; i++) acc = add(acc, fn(Math.max(from, t - (span * i) / (n - 1))));
+    return mul(acc, 1 / n);
   };
   P3.camera = function (eye, target, fov = 40, o = {}) {
     const f = norm(sub(target, eye));
@@ -282,6 +318,18 @@
     });
     return out;
   }
+  /** world.keep = [points]: what the shot is about (the planes). A puff between the camera and one of them fades to
+   *  a veil, so a cloud never hides the subject (it fades smoothly as the puff moves off the line of sight) */
+  function keepFade(cam, ob, world) {
+    let k = 1;
+    (world.keep || []).forEach((q) => {
+      const dq = sub(q, cam.eye), L = len(dq), dp = sub(ob.pos, cam.eye), along = dot(dp, dq) / (L || 1);
+      if (along <= 0 || along >= L + ob.r * 0.3) return;
+      const perp = len(sub(dp, mul(dq, along / (L || 1))));
+      k = Math.min(k, 0.15 + 0.85 * Math.max(0, Math.min(1, (perp - 0.6 * ob.r) / (0.9 * ob.r))));
+    });
+    return k;
+  }
   function drawPuff(c, d, cam, ob, world) {
     const p = cam.project(ob.pos);
     if (!p) return;
@@ -295,7 +343,7 @@
     const nb = rs.int(5, 7), RX = R * 1.12, RY = R * flat;
     const edge = (th) => 1 + 0.09 * Math.sin(nb * th + ph1) + 0.05 * Math.sin((nb * 2 + 1) * th + ph2);
     const g = c.createRadialGradient(p.x + lx * R * 0.45, p.y + ly * R * 0.4, R * 0.1, p.x, p.y + R * 0.1, R * 1.32);   // fades out at the bumpy edge
-    const lit = roleHex(ob.lit || "line"), sh = roleHex(ob.shade || "soft"), a = (ob.alpha ?? 1) * Math.max(0, Math.min(1, (p.z - ob.r * 1.2) / (ob.r * 3 + 6)));
+    const lit = roleHex(ob.lit || "line"), sh = roleHex(ob.shade || "soft"), a = (ob.alpha ?? 1) * Math.max(0, Math.min(1, (p.z - ob.r * 1.2) / (ob.r * 3 + 6))) * keepFade(cam, ob, world);
     if (a <= 0.01) return;
     g.addColorStop(0, S.rgba(lit, a)); g.addColorStop(0.42, S.rgba(S.mix(sh, lit, 0.72), a)); g.addColorStop(0.7, S.rgba(S.mix(sh, lit, 0.35), a * 0.92)); g.addColorStop(0.88, S.rgba(sh, a * 0.5)); g.addColorStop(1, S.rgba(sh, 0));
     c.beginPath();

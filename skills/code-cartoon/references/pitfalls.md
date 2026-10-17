@@ -75,6 +75,14 @@ next free number).
 | 65 | the snapshot or render shows one frozen frame from some time on | the scene threw an exception (a shadowed helper name, an undefined value) | `cartoon check-hf` lists `page_error`; do not shadow helpers (`P`, `X`) with locals |
 | 66 | the chase camera shows empty sky | the target point far ahead of the chaser, or the planes split | look between chaser and target, distance from their separation; check the middle of every shot |
 | 67 | `cartoon frames --jumps` flags every camera move in 3D | on twos half the frames repeat; a median over the zeros called every move a jump | fixed: the baseline is the median of the frames that changed; camera cuts still count, add them as cue events |
+| 68 | around a cut a plane comes in sideways and snaps level in 3–4 drawings; the frame swings; smoke is a stick | the path picks its formula by time (pass = `floor(t / phrase)`) and jumps at the cut; bank, speed, camera and trails sample a window across it | one path per shot, defined for any `t`, chosen once per drawing; `P3.flight` stops its window at a jump (`P3.span`) |
+| 69 | the camera jumps to the other plane at a random moment | the subject chosen by a condition ("whoever is behind now") that flips | the subject from the plan of the shot; it changes only on planned cuts |
+| 70 | the frame swings in one drawing when the target crosses close in front | the aim follows the target instantly | aim at `P3.lag` of the offset relative to the subject (0.3–0.5 s, from the shot start) |
+| 71 | the chased plane drops out of its own chase camera | the aim pulled toward a far target by a fixed fraction | keep the subject within ~15° of the aim |
+| 72 | a shot ends on empty sky, the cut lands on nothing | the action flew out of a fixed camera before the cut | pan with one of them; end on what the next shot starts with |
+| 73 | a plane banks away from the side it breaks to | the roll sign from a world direction; a plane flying the other way gets it mirrored | roll in its own frame: lateral offset · direction of flight |
+| 74 | a cloud hides the plane the shot is about | puffs between the camera and the subject | `world.keep: [the planes]` fades those puffs |
+| 75 | jerks shipped although `frames --jumps` had flagged them | the flags were dismissed as "camera cuts" without looking | a cut is ONE changed frame; mark cuts as events; the detector reports bursts; look at every flag with `--around` |
 
 ## Sound
 | # | symptom | cause | fix |

@@ -105,6 +105,23 @@ def main():
                 if subprocess.run([node, "--check", str(q)], capture_output=True).returncode != 0:
                     bad.append(p.parent.name + "/" + p.name)
         check("node --check (engine, scenes, modules)", not bad, ", ".join(bad))
+        # pencil3d: a path that jumps (a new shot) must not bank the plane around the jump
+        probe = r"""
+global.window = global; window.Sketch = {}; require(process.argv[2]);
+const P3 = window.P3, turn = (t, s) => [240 * Math.sin(t * 0.3), 0, s * 240 * (1 - Math.cos(t * 0.3))];
+const path = (t) => (t < 5 ? turn(t, 1) : (([x, y, z]) => [x - 700, y, z])(turn(t, -1)));
+const bank = (t) => { const a = P3.flight(path, t).att; return Math.atan2(P3.dot(a.u, P3.norm(P3.cross(a.f, [0, 1, 0]))), a.u[1]) * 180 / Math.PI; };
+console.log(JSON.stringify([4, 4.8, 4.98, 5.02, 5.2, 6].map((t) => [t, Math.abs(bank(t)), P3.len(P3.flight(path, t).vel)])));
+"""
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "probe.js").write_text(probe, encoding="utf-8")
+            r = subprocess.run([node, str(Path(td) / "probe.js"), str(SKILL / "assets/template/engine/pencil3d.js")], capture_output=True, text=True)
+        try:
+            rows = json.loads(r.stdout)
+            ok = all(abs(b - rows[0][1]) < 1 and abs(v - 72) < 2 for _, b, v in rows)
+            check("pencil3d: a jump in a path does not bank the plane", ok, " ".join(f"{t}s {b:.0f}deg {v:.0f}m/s" for t, b, v in rows))
+        except ValueError:
+            check("pencil3d: a jump in a path does not bank the plane", False, (r.stderr or r.stdout)[-200:])
     else:
         notes.append("node not found: JS syntax not checked")
 

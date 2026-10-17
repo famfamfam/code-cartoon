@@ -24,7 +24,9 @@ A good short video = one idea and one transformation. Test: can you retell it in
 7. **Rhythm**: events on the music beat (`music.bpm` in cues; with their song — `cartoon beats --snap`):
    at 96 bpm a beat is 0.625 s.
 8. **Transitions** by camera (push/pan), by shape (morph) or by iris between worlds — not by cuts,
-   unless the style asks for it.
+   unless the style asks for it. When there are cuts (a clip, a 3D chase): on a bar line, on the action
+   (the next shot starts with what the last one ended on), each one written in the storyboard and in
+   `cues.js`.
 
 ## Table template (in `project.md`)
 | time | drawn | camera | sound (cue id: type) |

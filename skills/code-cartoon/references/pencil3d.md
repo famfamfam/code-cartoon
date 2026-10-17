@@ -30,8 +30,10 @@ P3.draw(d, cam, [
   P3.object(planeMesh(), fl.pos, fl.att, 1, { seed: "A", tint: 1, damage: 0, line: 0.09 }),
   ...P3.cumulus([300, -170, 260], 320, 520, "tower", { lod: 1 }),   // base, width, height (m), seed
   P3.puff(pos, 6, { lit: "line", shade: "soft", alpha: 0.6, seed: "smoke7" }),
-], { sun: [0.4, 0.75, 0.5], ambient: 0.5, light: 1, shadow: "#1b1f2a" });
+], { sun: [0.4, 0.75, 0.5], ambient: 0.5, light: 1, shadow: "#1b1f2a", keep: [fl.pos] });   // keep: never hidden by a cloud
 P3.line(d.ink, d, cam, trailPoints, { width: 2, color: "soft", alpha: 0.5, seed: "trail" });   // trails, tracers
+P3.lag((tt) => aimOffset(tt), t, 0.4, shotStart);   // a camera aim that lags (mean over the last 0.4 s)
+P3.span(path, t, 0.3);                               // [lo, hi]: where the path is continuous around t
 ```
 - Model space: x = forward (nose), y = up, z = right; metres. World: y up.
 - `loft` stations `{x, ry, rz, y}` make a body; `wing` sections `{z, x (leading edge), c (chord), t, y}`
@@ -113,14 +115,39 @@ const fl = path.A.flight(d.t);          // { pos, vel, att } with the simulated 
 - A head-on pass: converge on one line, both fire, break at the last moment with fixed roles (one
   always climbs, the other always dives: switching roles from pass to pass reads as random).
 
+## Cuts without jerks
+Rule 9 of SKILL.md, the 3D way. On the test clip every cut between head-on passes jerked: the plane
+came in sideways and snapped level, the camera swung, the smoke was a stick for one drawing.
+- **One path per shot.** Build a path per pass/shot, defined for any `t` (before and after its shot it
+  simply flies on), and choose it once per drawing:
+  `const P = paths[passOf(d.t)]` — never `path(t) { const i = passOf(t); ... }`. The second version
+  jumps at the cut, and the bank, speed, cameras and trails all sample a short window around `t`.
+- `P3.flight` stops its window where a path jumps (`P3.span`), so a stray jump no longer turns a plane
+  sideways. Trails need `since` (the shot start), a lagging camera needs `from`.
+- **The subject is planned.** "Over the chaser's tail" means the chaser of the phrase from the plan.
+  Asking "who is behind now" flips at random moments, and the camera jumps to the other plane.
+- **Aim with a little lag**: aim at `P3.lag(offset, t, 0.4, shotStart)` of the aim point *relative to the
+  subject* (lagging the absolute point leaves it behind a fast plane). A target crossing close in front
+  no longer swings the frame in one drawing.
+- **Keep the subject in the frame**: pulling the aim toward a far target by a fixed fraction swings it
+  40–50° off; rotate the aim back to within ~15° of the subject.
+- **A cloud never hides the subject**: `world.keep: [A.pos, B.pos]` fades the puffs between the camera
+  and them.
+- **End a shot on the action**: after a head-on crossing pan with one plane (the next shot starts over
+  its tail); a fixed side camera that holds while both fly out ends on empty sky.
+- **Roll in the plane's own frame**: a break "to the side LN" is a right bank for a plane flying +LX and a
+  left bank for one flying back. Roll = lateral offset · direction of flight, never a world side.
+- Mark the cuts as events and check them: `cartoon frames out.mp4 --jumps --cues cues.js`, then
+  `--around <cut times>`.
+
 ## Cameras that work
-- **Chase**: behind the chaser, looking at a point between it and the target; distance from their
-  separation (`clamp(sep * 1.05 + 25, 34, 280)`). When the target is far ahead, look at the chaser.
+- **Chase**: behind the planned chaser, aiming (with a lag) between a point ahead of it and the target,
+  the chaser kept within ~15° of the centre. A framing camera for both: distance from their separation
+  (`clamp(sep * 1.05 + 25, 34, 280)`).
 - **Side follow**: a fixed side point that pans with the action (the sun behind them).
 - **Over the tail**: just behind and above one plane, looking forward (`up: att.u`), the other comes at us.
 - **From below into the sun**: silhouettes against the sun, for the climax.
-- Check the middle of every shot: a camera can lose the planes for a second when they split
-  (a look-ahead target helps).
+- Check the middle and both ends of every shot (`--around`): a camera can lose the planes when they split.
 
 ## Workflow for a long 3D clip
 1. Keyframes: `cartoon snapshot --at ...` of each world and a few key moments; show them.

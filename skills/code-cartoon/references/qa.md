@@ -20,7 +20,13 @@ cartoon frames out.mp4 --jumps --cues cues.js                                  #
 ```
 `--twitch` compares a region with its own temporal median and lists frames that change far more than
 the line boil (a pupil that jumps, a sprite that gets clipped, a texture that flickers).
-`--jumps` lists whole-frame changes that do not sit on a cue time.
+`--jumps` lists whole-frame changes that do not sit on a cue time. A cut is ONE changed frame: several big
+changes within half a second are reported as a burst (the frame settles or swings after a cut). Never
+dismiss a flag as "just a camera cut": mark the planned cuts as events (`"type": "none"`; a flash with its
+`dur`), and look at the rest drawing by drawing:
+```bash
+cartoon frames out.mp4 --around 117.6,124.5    # 3 drawings before, 5 after each time, one row per time
+```
 
 ## A frozen frame means an exception
 If a snapshot or a render shows the same frame from some time on (or a black/empty world), the scene
@@ -34,6 +40,8 @@ HyperFrames checks and lists `page_error` with the message. Run it after every b
 - [ ] Text: capital height >= 48–56 px per 1080 px of width (Caveat >= 80 px, Inter >= 66 px), slogan >= 64 px.
 - [ ] Text is not covered by motion and not in the bottom 15 % (red on the sheet) or the right 12 %.
 - [ ] Nothing jumps that should stand (compare neighbouring frames: line boil <= 2 px is normal, an object jump is not).
+- [ ] Every cut is clean (`--around`): the first drawings of a shot are as calm as the rest, the last ones
+      still show the action (not empty sky), nothing turns or swings in the drawings next to the cut.
 - [ ] The frame is not overloaded: one main object, small things in the faint `soft` role.
 - [ ] Neon is not blown out: at most 3 glowing accents at a time, text under glow is readable.
 - [ ] No "foreign" colours (when in doubt: `cartoon palettes .` — the frame must look right in every

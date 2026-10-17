@@ -105,7 +105,8 @@ A clip is long and the user wants to see it before 15 minutes of rendering: keyf
 part + the key moments), then each part as a draft (`cartoon cut fight --from 41.8 --to 83.1 --size
 1920x1080`, render inside `cuts/fight`), then the full render. Keep every version beside the last
 one (`clip-v2.mp4`, sources in `versions/v2/`). Camera cuts inside a part are planned jumps: add them
-as cue events (`{"id": "cut3", "t": 97.2}`) so `cartoon frames --jumps` checks only the rest.
+as cue events (`{"id": "cut3", "t": 97.2, "type": "none"}`, a flash with its `dur`) so `cartoon frames
+--jumps` checks only the rest, and look at each cut with `--around`.
 
 ## Render time
 Measured on a Windows laptop: the 46.5 s demo clip in 16:9 renders in ~3 minutes (about 4x the length),
