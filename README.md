@@ -27,8 +27,10 @@ Made for [6io.io](https://6io.io).
 These five are bundled: `cartoon example <name>` rebuilds any of them (the clip sings a synthesized demo
 song), and the renders are attached to the [releases](https://github.com/famfamfam/code-cartoon/releases).
 
-A real clip made with the skill: **[Steel Wings](https://github.com/famfamfam/code-cartoon/releases/download/v1.2.0/Steel-Wings-Ela-Sixio.mp4)** (MP4, 82 MB, with the music), a WWII dogfight in
-coloured-pencil 3D to an instrumental by Ela & Sixio, 2:37, made from the track alone.
+A real clip made with the skill: **Steel Wings**, a WWII dogfight in coloured-pencil 3D to an instrumental
+by Ela & Sixio, 2:37, made from the track alone. Click the preview for the full clip (MP4, 82 MB, with the music).
+
+<a href="https://github.com/famfamfam/code-cartoon/releases/download/v1.2.0/Steel-Wings-Ela-Sixio.mp4"><img src="docs/media/steel-wings.webp" alt="Steel Wings: pencil planes come alive on paper, a chase in the clouds, a hit, a split against the sun, the title" width="480"></a>
 
 ## What it can make
 

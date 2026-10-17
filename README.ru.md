@@ -27,8 +27,11 @@ Three.js для 3D). Затем он рендерит MP4 через [HyperFrame
 Эти пять роликов идут в комплекте: `cartoon example <имя>` собирает любой из них заново (клип поётся
 под синтезированную демо-песню), а готовые MP4 приложены к [релизам](https://github.com/famfamfam/code-cartoon/releases).
 
-Настоящий клип, сделанный этим навыком: **[Steel Wings](https://github.com/famfamfam/code-cartoon/releases/download/v1.2.0/Steel-Wings-Ela-Sixio.mp4)** (MP4, 82 МБ, со звуком), воздушный бой
-Второй мировой в 3D цветным карандашом под инструментал Ela & Sixio, 2:37, сделан по одному треку.
+Настоящий клип, сделанный этим навыком: **Steel Wings**, воздушный бой Второй мировой в 3D цветным
+карандашом под инструментал Ela & Sixio, 2:37, сделан по одному треку. Нажмите на превью, чтобы открыть
+полный клип (MP4, 82 МБ, со звуком).
+
+<a href="https://github.com/famfamfam/code-cartoon/releases/download/v1.2.0/Steel-Wings-Ela-Sixio.mp4"><img src="docs/media/steel-wings.webp" alt="Steel Wings: карандашные самолёты оживают на бумаге, погоня в облаках, попадание, расхождение на фоне солнца, титры" width="480"></a>
 
 ## Что можно сделать
 
