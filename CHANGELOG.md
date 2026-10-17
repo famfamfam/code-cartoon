@@ -17,7 +17,8 @@ Lessons from a real song: a 2.5-minute instrumental clip (a WWII dogfight in col
 - **Staged review for long videos:** keyframes, then a draft of each part (`cartoon cut <part> --from
   --to --size`), then the full render; every version the user saw is kept beside the new one.
 - **Cuts without jerks** (SKILL.md rule 9). `P3.flight` stops its time window where a path jumps (a plane
-  no longer comes into a new shot sideways), `P3.lag` for chase cameras that do not swing, `world.keep`
+  no longer comes into a new shot sideways), `P3.lag` for chase cameras that ride behind
+  instead of being bolted to the plane, `P3.horizon` for a sky that tilts with the camera, `world.keep`
   so a cloud never hides the planes.
   - `cartoon frames --jumps`:
     - a cut explains one changed frame; a burst of changes after it is reported;
@@ -27,7 +28,7 @@ Lessons from a real song: a 2.5-minute instrumental clip (a WWII dogfight in col
   - A frozen frame is explained as an exception (`cartoon check-hf`).
 - Palette `sky` (sunny sky with dramatic clouds); `storm`, `dusk` and `sky` have `red`, `black`, `white`
   for insignia; `assets/themes.jpg` shows all 16 palettes (`cartoon palettes` lays them out in a square
-  grid). 21 new pitfalls (3D attitude, aiming, trails across cuts, clouds, palette before
+  grid). 24 new pitfalls (3D attitude, aiming, trails across cuts, clouds, palette before
   geometry, cameras and cuts), a recipe "a duel in the sky", instrumentals and your own parts in `song-clip.md`.
 
 ## 1.1.0 — 2026-10-16

@@ -83,6 +83,9 @@ next free number).
 | 73 | a plane banks away from the side it breaks to | the roll sign from a world direction; a plane flying the other way gets it mirrored | roll in its own frame: lateral offset · direction of flight |
 | 74 | a cloud hides the plane the shot is about | puffs between the camera and the subject | `world.keep: [the planes]` fades those puffs |
 | 75 | jerks shipped although `frames --jumps` had flagged them | the flags were dismissed as "camera cuts" without looking | a cut is ONE changed frame; mark cuts as events; the detector reports bursts; look at every flag with `--around` |
+| 76 | in a chase shot the plane stays still and the whole sky whips round in one or two drawings | the camera bolted to the plane: its attitude every drawing (rolls of 14° per drawing in a 9 g fight) | the camera follows the heading and bank lagged ~0.5 s (`P3.lag`), the horizon tilted by half the bank at most |
+| 77 | the sky turns light/dark in one drawing while the camera rolls | a vertical gradient with the horizon from the pitch only | the gradient along world up as the frame sees it: `P3.horizon(cam, ...)` |
+| 78 | the camera jumps when the target passes close to it | pushed "away from the target": the direction flips as it passes | push along a stable axis (up), by an amount that grows smoothly |
 
 ## Sound
 | # | symptom | cause | fix |

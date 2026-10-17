@@ -34,6 +34,7 @@ P3.draw(d, cam, [
 P3.line(d.ink, d, cam, trailPoints, { width: 2, color: "soft", alpha: 0.5, seed: "trail" });   // trails, tracers
 P3.lag((tt) => aimOffset(tt), t, 0.4, shotStart);   // a camera aim that lags (mean over the last 0.4 s)
 P3.span(path, t, 0.3);                               // [lo, hi]: where the path is continuous around t
+c.createLinearGradient(...P3.horizon(cam, H * 1.1, H * 0.5));   // the sky: tilts with the camera's roll
 ```
 - Model space: x = forward (nose), y = up, z = right; metres. World: y up.
 - `loft` stations `{x, ry, rz, y}` make a body; `wing` sections `{z, x (leading edge), c (chord), t, y}`
@@ -131,6 +132,14 @@ came in sideways and snapped level, the camera swung, the smoke was a stick for 
   no longer swings the frame in one drawing.
 - **Keep the subject in the frame**: pulling the aim toward a far target by a fixed fraction swings it
   40–50° off; rotate the aim back to within ~15° of the subject.
+- **A chase camera rides its own plane, it is not bolted to the chased one.** It follows the plane's
+  heading and bank averaged over ~0.5 s (`P3.lag` of `att.f` / `att.u`), and tilts the horizon by half the
+  bank at most. Bolted on, every roll and pull of a 9 g fight whips the whole sky round in one drawing
+  while the plane stays still. Lagged, the plane visibly banks in the frame, which reads better.
+- **When the target comes close, move the camera along a stable axis** (rise along its up). Pushed "away
+  from the target", the push flips direction as the target passes, and the camera jumps.
+- **The sky turns with the camera**: a vertical gradient with a horizon from the pitch alone jumps when
+  the camera rolls; use `P3.horizon(cam, ...)`.
 - **A cloud never hides the subject**: `world.keep: [A.pos, B.pos]` fades the puffs between the camera
   and them.
 - **End a shot on the action**: after a head-on crossing pan with one plane (the next shot starts over

@@ -10,6 +10,7 @@
  *   P3.draw(d, cam, [P3.object(M, pos, P3.attitude(fwd, up, roll), scale, opts), P3.puff(pos, r, opts), ...], world)
  *   P3.flight(path, t) -> { pos, vel, att } of a path(t) -> [x, y, z] (banked by its sideways acceleration;
  *     its time window stops where the path jumps: P3.span);  P3.lag(fn, t, span, from) -> a camera aim that lags
+ *   P3.horizon(cam, above, below) -> a sky gradient line that tilts with the camera
  *   P3.track(t0, dt, rows) -> a path from simulated samples, with .flight(t) (see references/pencil3d.md)
  *   P3.cumulus(base, w, h, seed, o) -> puffs of a cumulus cloud;  P3.line(c, d, cam, pts, o) -> trails, tracers
  * World: Y is up, metres. world = { sun: unit vector toward the sun, shadow: hex, ink: role, hatch: role, ambient,
@@ -211,6 +212,18 @@
         return { x: W / 2 + (focal * dot(d, r)) / z, y: H / 2 - (focal * dot(d, u)) / z, z, k: focal / z };
       },
     };
+  };
+
+  /** the sky gradient line for a camera: [x0, y0, x1, y1] from `above` (px over the horizon, the sky colour) to
+   *  `below` (px under it). It runs along world "up" as the frame sees it, so it tilts with a rolling camera, and the
+   *  horizon sits focal * tan(elevation) from the centre. c.createLinearGradient(...P3.horizon(cam, H * 1.1, H * 0.5)) */
+  P3.horizon = function (cam, above, below) {
+    let ux = cam.r[1], uy = -cam.u[1];                // world up (0, 1, 0) seen in the frame (screen y goes down)
+    const ul = Math.hypot(ux, uy);
+    if (ul < 1e-3) { ux = 0; uy = -1; } else { ux /= ul; uy /= ul; }
+    const el = Math.asin(Math.max(-1, Math.min(1, cam.f[1]))), off = Math.max(-2 * S.H, Math.min(2 * S.H, cam.focal * Math.tan(Math.max(-1.4, Math.min(1.4, el)))));
+    const hx = S.W / 2 - ux * off, hy = S.H / 2 - uy * off;
+    return [hx + ux * above, hy + uy * above, hx - ux * below, hy - uy * below];
   };
 
   /* ---------------------------------------------------------------- drawables */

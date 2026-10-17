@@ -167,7 +167,8 @@ same kind again a cut; `in:` per kind (or `(sec, prev) => ...`) overrides. **bea
 `engine/pencil3d.js` (loaded by the template after `sketch.js`) adds `P3`: meshes (`P3.mesh().loft()
 .wing().slab().fin().decal().rod().done()`), `P3.camera`, `P3.object`, `P3.puff`, `P3.cumulus`,
 `P3.flight` (a banked attitude from a path; its window stops where the path jumps), `P3.track` (a path from
-simulated samples), `P3.lag` (a camera aim that lags), `P3.line` (trails) and `P3.draw(d, cam, list, world)`
+simulated samples), `P3.lag` (a camera aim that lags), `P3.horizon` (a sky gradient that tilts with the
+camera), `P3.line` (trails) and `P3.draw(d, cam, list, world)`
 (`world.keep`: puffs never hide these points). Draw it inside a normal scene; full guide: `pencil3d.md`.
 
 ## Palettes
