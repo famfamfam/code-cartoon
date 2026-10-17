@@ -11,6 +11,8 @@ Claude Code.
   first time you use it.
 - **Your photos and drawings** stay in the project folder you choose. The skill tells Claude to treat
   photos of real people, especially children, as private and never to publish or upload them.
+- **Your songs, lyrics and stems** (clips to a song) stay in the project folder too: beats, parts and
+  lyric timing are computed locally, without any recognition service.
 - **Claude Code itself** sends your conversation to the model provider as usual; that is governed by
   your Claude Code agreement, not by this skill.
 

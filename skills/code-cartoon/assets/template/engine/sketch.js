@@ -20,12 +20,17 @@
  *   Line widths follow the camera zoom (Sketch.config.zoomComp), so a 5x push-in
  *   does not turn pencil lines into ropes.
  *
+ * Clips to a song (since 1.2, cues.js "song" from `cartoon song`):
+ *   Sketch.songScenes({ verse, chorus, ... }) — one world per part of the song
+ *   d.beat, d.pulse(), d.energy, d.sec, d.lyric() + Sketch.fx.lyric(), Sketch.safe()
+ *   beatLock: on twos, a new drawing starts on every beat; cues "window" = a cut of the clip
+ *
  * API reference: references/engine-api.md
  * ==========================================================================*/
 (function (global) {
   "use strict";
   const S = {};
-  S.version = "1.1.0";
+  S.version = "1.2.0";
   /* zoomComp: line width, wobble and hatch spacing are multiplied by zoom^-zoomComp
      (0 = off). Keeps strokes readable when the camera pushes in or pulls out. */
   S.config = { fpsDraw: 12, onTwos: true, boil: 1, paperJitter: 0.8, grain: 0.35, zoomComp: 0.75 };
@@ -84,9 +89,16 @@
   /* -------------------------------------------------------------- time/ease */
   S.frame = (t) => Math.floor(t * S.config.fpsDraw + 1e-6);
   S.held = (t) => S.frame(t) / S.config.fpsDraw;
-  /** time constant from cues.js — usable anywhere (camera(), setup) */
-  S.cue = (id) => { const e = ((global.CUES && global.CUES.events) || []).find((c) => c.id === id); if (!e) throw new Error("cue not found: " + id); return e.t; };
-  S.cueEnd = (id) => { const e = ((global.CUES && global.CUES.events) || []).find((c) => c.id === id); if (!e) throw new Error("cue not found: " + id); return e.t + (e.dur || 0); };
+  /** time constant from cues.js — usable anywhere (camera(), setup). A part of the song ("chorus2") works too. */
+  const findCue = (id) => {
+    const e = ((global.CUES && global.CUES.events) || []).find((c) => c.id === id);
+    if (e) return [e.t, e.t + (e.dur || 0)];
+    const s = ((global.CUES && global.CUES.song && global.CUES.song.sections) || []).find((c) => c.id === id);
+    if (s) return [s.t, s.end];
+    throw new Error("cue not found: " + id);
+  };
+  S.cue = (id) => findCue(id)[0];
+  S.cueEnd = (id) => findCue(id)[1];
   S.clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
   S.lerp = (a, b, k) => a + (b - a) * k;
   /** progress of t inside [t0,t1] -> 0..1 */
@@ -738,6 +750,7 @@
         const r = S.ease.out(u) * FX.fullRadius(), pal = cur.palette || d.basePalette;
         FX.iris([d.ink, d.glow], r, () => S.withPalette(pal, () => {
           d.screen(d.ink, (c) => c.drawImage(d.paper(pal), -(S.OV - 1) * S.W / 2, -(S.OV - 1) * S.H / 2));
+          d.screen(d.glow, (c) => c.clearRect(0, 0, S.W, S.H));  // the old world's glow does not shine through the circle
           run(cur);
         }));
         FX.irisRing(d.glow, r, { color: tr.ring ?? "warm", alpha: 0.9 * (1 - u) });
@@ -799,6 +812,180 @@
     ctx.globalAlpha = 0.4; ctx.drawImage(tc, x + r.range(-2, 2), y + r.range(-2, 2)); ctx.restore();
   };
 
+  /* ------------------------------------------------------------------ song */
+  /* A clip to a song: cues.js "song" (written by `cartoon song`) holds the beat grid, the bar lines,
+   * the parts of the song and an energy curve; "lyric" cues hold the lines. Everything is in SONG time:
+   * in a cut (cues "window") the engine shifts the frame time, so d.t, d.cue() and the parts still match. */
+  const songInfo = () => (global.CUES && global.CUES.song) || null;
+  const lastLE = (arr, t) => { let lo = 0, hi = arr.length - 1; if (!arr.length || t < arr[0]) return -1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (arr[m] <= t) lo = m; else hi = m - 1; } return lo; };
+  /** where t sits on the beat grid: { i (beat index), t0 (its start), len, phase 0..1, bar, beatInBar 0..3, barPhase 0..1, bpm }.
+   *  Before and after the song the grid is extended; without a song it is music.bpm from cues.js. */
+  S.beat = function (t) {
+    const s = songInfo(), G = s && s.beats;
+    let i, t0, len;
+    if (!G || G.length < 2) {
+      len = 60 / ((global.CUES && global.CUES.music && global.CUES.music.bpm) || 120); i = Math.floor(t / len); t0 = i * len;
+    } else {
+      const n = G.length, j = lastLE(G, t);
+      if (j < 0) { len = G[1] - G[0]; i = Math.floor((t - G[0]) / len); t0 = G[0] + i * len; }
+      else if (j >= n - 1) { len = G[n - 1] - G[n - 2]; const e = Math.floor((t - G[n - 1]) / len); i = n - 1 + e; t0 = G[n - 1] + e * len; }
+      else { i = j; t0 = G[j]; len = G[j + 1] - G[j]; }
+    }
+    const beatInBar = ((i % 4) + 4) % 4, phase = S.clamp((t - t0) / len);
+    return { i, t0, len, phase, bar: Math.floor(i / 4), beatInBar, barPhase: (beatInBar + phase) / 4, bpm: 60 / len };
+  };
+  /** 1 on a hit, then decays: o = { grid: "beat" | "bar" | "half", decay: 0.22 (s), accent: [1, .55, .8, .55] (per beat of the bar) } */
+  S.pulse = function (t, o = {}) {
+    const b = S.beat(t), grid = o.grid || "beat", decay = o.decay ?? 0.22;
+    let since = t - b.t0, acc = 1;
+    if (grid === "bar") since = t - (b.t0 - b.beatInBar * b.len);
+    else if (grid === "half") since = (t - b.t0) % (b.len / 2);
+    else acc = (o.accent || [1, 0.55, 0.8, 0.55])[b.beatInBar];
+    return since < 0 ? 0 : acc * Math.exp(-since / decay);
+  };
+  /** loudness of the song at t, 0..1 (0.5 s steps, interpolated); 0.5 without a song */
+  S.energy = function (t) {
+    const s = songInfo(), e = s && s.energy;
+    if (!e || !e.v || !e.v.length) return 0.5;
+    const u = (t - e.t0) / e.hop, i = Math.floor(u);
+    return i < 0 ? e.v[0] : i >= e.v.length - 1 ? e.v[e.v.length - 1] : S.lerp(e.v[i], e.v[i + 1], u - i);
+  };
+  function secInfo(i, t) {
+    const L = songInfo().sections, x = L[i], of = L.filter((y) => y.label === x.label).length;
+    return { id: x.id, label: x.label, n: x.n, of, last: x.n === of - 1, i, from: x.t, to: x.end, bars: x.bars, t: t - x.t, p: S.prog(t, x.t, x.end) };
+  }
+  /** the part of the song at t: { id: "chorus2", label: "chorus", n (0 = first of its kind), of (how many of its kind),
+   *  last (the last of its kind), i, from, to, bars, t (seconds since it began), p (0..1) } or null without a song */
+  S.section = function (t) {
+    const L = (songInfo() || {}).sections || [];
+    if (!L.length) return null;
+    const i = L.findIndex((x) => t < x.end);
+    return secInfo(i < 0 ? L.length - 1 : i, t);
+  };
+  S.sections = () => ((songInfo() || {}).sections || []).map((x, i) => secInfo(i, x.t));
+  /**
+   * Scenes for Sketch.mount({ scenes }) from the parts of the song — one world per kind of part:
+   *   Sketch.songScenes({ verse: { palette, camera, draw }, chorus: {...}, "*": {...} })
+   * def: { palette: "name" | (sec) => "name", camera: (t, local) => cam, draw: (d, local) => {}, scale,
+   *        in: { type: "cut" | "iris" | "flash", dur } | (sec, prev) => transition }
+   * local = { t (since the part began), p, scene, sec } — sec.n grows with every repeat of the chorus.
+   * Default transitions: into a chorus a soft "flash" (1 beat), into another kind "iris" (2 beats), the same kind again "cut".
+   */
+  S.songScenes = function (defs) {
+    const L = (songInfo() || {}).sections || [];
+    const pal = (def, sec) => (typeof def.palette === "function" ? def.palette(sec) : def.palette);
+    if (!L.length) {
+      const d0 = defs["*"] || defs[Object.keys(defs)[0]];
+      return [{ id: "all", from: 0, to: 1e9, palette: pal(d0, null), camera: d0.camera, scale: d0.scale, draw: (d, l) => d0.draw(d, Object.assign(l, { sec: null })) }];
+    }
+    return L.map((x, i) => {
+      const def = defs[x.label] || defs["*"];
+      if (!def) throw new Error("songScenes: no scene for '" + x.label + "' (add it or a \"*\" fallback)");
+      const sec = secInfo(i, x.t), prev = i ? secInfo(i - 1, L[i - 1].t) : null, beat = S.beat(x.t).len;
+      let tin = typeof def.in === "function" ? def.in(sec, prev) : def.in;
+      if (tin === undefined) tin = !prev || prev.label === x.label ? { type: "cut" } : x.label === "chorus" ? { type: "flash", dur: beat, peak: 0.22 } : { type: "iris", dur: 2 * beat };
+      const live = (t) => Object.assign({}, sec, { t: t - x.t, p: S.prog(t, x.t, x.end) });
+      return {
+        id: x.id, from: x.t, to: x.end, palette: pal(def, sec), scale: def.scale, in: tin,
+        camera: def.camera ? (t, l) => def.camera(t, Object.assign(l, { sec: live(t) })) : undefined,
+        draw: (d, l) => def.draw(d, Object.assign(l, { sec: live(d.t) })),
+      };
+    });
+  };
+  let lyrCache = null;
+  /** lyric lines ("lyric" cues). at(t) -> the line on screen or null:
+   *  { id, i, text, words: [{ w, t0, t1, p }], sung (index of the word being sung, -1 before), p (0..1 through the
+   *    sung line), alpha, next (the next line's text), backing, section, t0, t1 }
+   *  o = { lead: 0.12 (s on screen before it is sung), hold: 0.6 (s after), fade: 0.18 } */
+  S.lyrics = {
+    all() { return lyrCache || (lyrCache = ((global.CUES && global.CUES.events) || []).filter((e) => e.type === "lyric").sort((a, b) => a.t - b.t)); },
+    at(t, o = {}) {
+      const all = S.lyrics.all(), lead = o.lead ?? 0.12, hold = o.hold ?? 0.6, fade = o.fade ?? 0.18;
+      for (let i = all.length - 1; i >= 0; i--) {
+        const e = all[i];
+        if (t < e.t - lead) continue;
+        const next = all[i + 1], end = e.t + (e.dur || 2), until = next ? Math.min(next.t - lead, end + hold) : end + hold;
+        if (t > until) return null;
+        const src = e.words && e.words.length ? e.words : [[e.t, e.text]];
+        const words = src.map((w, j) => { const t1 = j + 1 < src.length ? src[j + 1][0] : end; return { w: w[1], t0: w[0], t1, p: S.prog(t, w[0], Math.max(w[0] + 0.05, t1)) }; });
+        return {
+          id: e.id, i, text: e.text, words, sung: words.reduce((a, w, j) => (t >= w.t0 ? j : a), -1), p: S.prog(t, e.t, end),
+          alpha: S.clamp((t - (e.t - lead)) / fade) * (1 - S.clamp((t - (until - fade)) / fade)),
+          next: next ? next.text : null, backing: e.backing || null, section: e.section, t0: e.t, t1: end,
+        };
+      }
+      return null;
+    },
+  };
+  /** the area that platform interfaces do not cover, frame pixels { x, y, w, h }:
+   *  9:16 — top 8 %, bottom 15 %, right 12 %, left 6 %; 16:9 — 5 % around; 1:1 / 4:5 — 6 %, bottom 10 % */
+  S.safe = function () {
+    const W = S.W, H = S.H, r = H / W;
+    const m = r > 1.5 ? [0.06, 0.12, 0.08, 0.15] : r < 0.8 ? [0.05, 0.05, 0.05, 0.05] : [0.06, 0.06, 0.06, 0.1];
+    return { x: W * m[0], y: H * m[2], w: W * (1 - m[0] - m[1]), h: H * (1 - m[2] - m[3]) };
+  };
+  /** layout scale of the starters: 1 = a 1080-wide vertical frame or a 1080-high wide one */
+  S.layoutScale = () => (S.W / S.H >= 1.2 ? S.H / 1080 : Math.min(S.W / 1080, (S.H / 1920) * 1.25));
+  const meas = () => meas.c || (meas.c = document.createElement("canvas").getContext("2d"));
+  function wrapWords(words, font, maxW) {
+    const m = meas(); m.font = font;
+    const sp = m.measureText(" ").width, rows = [[]];
+    let w = 0;
+    words.forEach((x, j) => {
+      const ww = m.measureText(x.w).width;
+      if (rows[rows.length - 1].length && w + sp + ww > maxW) { rows.push([]); w = 0; }
+      const row = rows[rows.length - 1];
+      row.push({ j, w: x.w, x: row.length ? w + sp : 0, width: ww }); w = row.length > 1 ? w + sp + ww : ww;
+    });
+    return rows.map((r) => ({ items: r, width: r.length ? r[r.length - 1].x + r[r.length - 1].width : 0 }));
+  }
+  /**
+   * Draw a lyric line from Sketch.lyrics.at() / d.lyric(). Frame pixels: call it inside d.screen().
+   * o: { k, style: "write" | "karaoke" | "stamp" | "ribbon", x, y (baseline of the last row; default: low in the
+   *      safe area), font (default Caveat sized by the frame), color: "line", sungColor: "warm", restColor: "soft",
+   *      maxWidth (default 92 % of the safe area; long lines wrap into 2 rows), backing: true }
+   *   write   — the words are written by hand as they are sung (pencil, chalk, notebook)
+   *   karaoke — the whole line stands, the sung part changes colour (any style)
+   *   stamp   — every word pops in when it is sung (neon, halftone, collage)
+   *   ribbon  — the line on a lubok ribbon
+   */
+  FX.lyric = function (ctx, line, o = {}) {
+    if (!line || line.alpha <= 0) return;
+    const sa = S.safe(), ls = S.layoutScale(), k = o.k | 0, style = o.style || "write";
+    const size = o.size ?? Math.round(Math.max(88, 104 * ls));
+    const font = o.font ?? `700 ${size}px Caveat`, px = parseFloat(/(\d+(?:\.\d+)?)px/.exec(font)[1]);
+    const maxW = o.maxWidth ?? sa.w * 0.92, x = o.x ?? sa.x + sa.w / 2;
+    const y = o.y ?? sa.y + sa.h * (S.H / S.W > 1.5 ? 0.8 : 0.9);
+    const rows = wrapWords(line.words, font, maxW), lh = px * 1.08, top = y - (rows.length - 1) * lh;
+    const chars = line.words.map((w) => w.w.length + 1), total = chars.reduce((a, b) => a + b, 0) || 1;
+    const sungChars = line.words.reduce((a, w, j) => a + (j < line.sung ? chars[j] : j === line.sung ? chars[j] * w.p : 0), 0);
+    const frac = S.clamp(sungChars / total), text = rows.map((r) => r.items.map((it) => it.w).join(" ")).join("\n");
+    const alpha = line.alpha * (o.alpha ?? 1);
+    if (style === "ribbon") {
+      const m = meas(); m.font = font;
+      FX.ribbon(ctx, line.text, x, y - px * 0.3, Math.min(sa.w, m.measureText(line.text).width + 120 * ls), 0.35 + 0.65 * frac, { k, font, out: 1 - line.alpha, height: px * 1.25, baseline: px * 0.32 });
+    } else if (style === "stamp") {
+      rows.forEach((r, ri) => r.items.forEach((it) => {
+        const w = line.words[it.j]; if (line.sung < it.j) return;
+        const sc = S.ease.pop(S.clamp((w.p * (w.t1 - w.t0)) / 0.18));
+        const cx = x - r.width / 2 + it.x + it.width / 2, cy = top + ri * lh;
+        ctx.save(); ctx.translate(cx, cy - px * 0.3); ctx.scale(sc, sc);
+        Pen.text(ctx, it.w, 0, px * 0.3, { k, font, color: it.j === line.sung ? o.sungColor ?? "warm" : o.color ?? "line", alpha });
+        ctx.restore();
+      }));
+    } else if (style === "karaoke") {
+      Pen.text(ctx, text, x, top, { k, font, color: o.restColor ?? "soft", alpha: alpha * 0.85 });
+      Pen.text(ctx, text, x, top, { k, font, color: o.sungColor ?? "warm", alpha, progress: frac });
+    } else {
+      Pen.text(ctx, text, x, top, { k, font, color: o.color ?? "line", alpha, progress: frac });
+    }
+    if (line.backing && o.backing !== false) {
+      Pen.text(ctx, line.backing, x, y + px * 0.75, { k, font: font.replace(/\d+(?:\.\d+)?px/, Math.round(px * 0.6) + "px"), color: o.restColor ?? "soft", alpha: alpha * 0.9, progress: S.clamp(frac * 1.5) });
+    }
+  };
+  /** Sketch.cam.kick(cam, pulse, 0.03): the camera punches in on a hit (zoom x (1 + amount * pulse)) */
+  CAM.kick = (c, pulse, amount = 0.03) => Object.assign({}, CAM.norm(c), { zoom: CAM.norm(c).zoom * (1 + amount * pulse) });
+
   /* ----------------------------------------------------------------- mount */
   /**
    * Sketch.mount({ palette, draw(d), camera(t) -> {x,y,zoom,rot,shake}, fonts:[...], onTwos })
@@ -828,9 +1015,19 @@
       try { return Paper.render(Math.ceil(W * OV), Math.ceil(H * OV), S.pal); } finally { S.zoomK = z; }
     }));
     const drawFn = opts.scenes ? S.sequence(opts.scenes) : opts.draw;
+    // a cut of a longer clip (cues "window", written by `cartoon cut`): frame time -> song time
+    const win = (global.CUES && global.CUES.window) || null, OFF = win ? +win.from || 0 : 0;
+    // beatLock: on twos, a new drawing starts exactly on every beat (the drawings of a beat share it evenly)
+    const lock = S.config.onTwos && opts.beatLock !== false && !!(songInfo() && songInfo().beats);
+    const hold = (raw) => {
+      if (!lock) return [S.held(raw), S.frame(raw)];
+      const b = S.beat(raw), m = Math.max(1, Math.round(b.len * S.config.fpsDraw));
+      const t = b.t0 + (Math.floor(b.phase * m + 1e-6) / m) * b.len;
+      return [t, Math.round(t * 1000)];
+    };
 
-    function render(raw) {
-      const t = S.config.onTwos ? S.held(raw) : raw, k = S.frame(raw);
+    function render(time) {
+      const raw = time + OFF, [ht, k] = hold(raw), t = S.config.onTwos ? ht : raw;
       // every frame starts from the same state, whatever the previous frame switched (determinism)
       S.usePalette(basePal);
       let framePal = null; // set by d.setPalette; legacy scenes that call Sketch.usePalette keep the old behaviour
@@ -850,6 +1047,14 @@
         /** draw in frame pixels (captions, frames, flashes); restores transform and zoom afterwards */
         screen(ctx, fn) { const z = S.zoom; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); S.setZoom(1); try { return fn(ctx); } finally { ctx.restore(); S.setZoom(z); } },
         caption: (cid, o) => S.caption(t, cid, o),
+        /** song clips: the lyric line on screen, the beat grid, the part of the song, a hit pulse, the loudness */
+        lyric: (o) => S.lyrics.at(t, o),
+        get beat() { return S.beat(t); },
+        get sec() { return S.section(t); },
+        pulse: (o) => S.pulse(t, o),
+        get energy() { return S.energy(t); },
+        /** { from, to, cut } — in a cut, from/to are the song times it covers; left = seconds to its end */
+        window: { from: OFF, to: OFF + DUR, cut: !!win, left: OFF + DUR - raw },
       };
       drawFn(d);
       // tooth: knock paper grain out of the ink (pencil skips over the paper's pits)
@@ -881,7 +1086,7 @@
     const build = (async () => {
       await Promise.all(fontList.map((f) => document.fonts.load(f, "АБВabc").catch(() => null)));
       await Promise.all(pending);
-      [basePal].concat(opts.palettes || []).forEach(paperFor);
+      [basePal].concat(opts.palettes || [], (opts.scenes || []).map((s) => s.palette).filter(Boolean)).forEach(paperFor);
       grainPat = I.createPattern(Paper.grain(), "repeat");
       if (opts.setup) await opts.setup(S);
       ready = true;

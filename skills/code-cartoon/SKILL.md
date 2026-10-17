@@ -1,7 +1,7 @@
 ---
 name: code-cartoon
-description: Makes animated videos as CODE (HTML canvas/JS, 3D with Three.js) rendered to MP4 with HyperFrames, with synthesized sound and optional narration. Hand-drawn styles (pencil, chalk, blueprint, notebook, kraft, neon), a child's crayons, Russian lubok print, retro halftone, newspaper collage, glass/chrome 3D, real photo + 3D pop-up stories, hybrid with a reference video (rotoscope). Use when asked for a cartoon, animation, explainer, intro, reel/short, motion graphics "made with code", "in pencil / sketch style", "like this example", or to bring a drawing or a photo to life. Not for neural video generation (Sora/Veo/Kling), editing existing footage with subtitles, still images or slide decks.
-when_to_use: "Triggers in any language, e.g. мультик, анимация кодом, рисованный ролик, рилс, заставка, эксплейнер, оживить рисунок, в стиле карандаша / мела / лубка; cartoon, animation, animated explainer, reel, intro, motion graphics, hand-drawn video, bring my drawing to life."
+description: Makes animated videos as CODE (HTML canvas/JS, 3D with Three.js) rendered to MP4 with HyperFrames, with synthesized sound and optional narration. Hand-drawn styles (pencil, chalk, blueprint, notebook, kraft, neon), a child's crayons, Russian lubok print, retro halftone, newspaper collage, glass/chrome 3D, real photo + 3D pop-up stories, hybrid with a reference video (rotoscope), animated clips to a song (Suno/Udio) with the lyrics on the beat and a cut for Reels. Use when asked for a cartoon, animation, explainer, intro, reel/short, motion graphics "made with code", "in pencil / sketch style", "like this example", a music video / lyric video to their song, or to bring a drawing or a photo to life. Not for neural video generation (Sora/Veo/Kling), editing existing footage with subtitles, still images or slide decks.
+when_to_use: "Triggers in any language, e.g. мультик, анимация кодом, рисованный ролик, рилс, заставка, эксплейнер, оживить рисунок, клип на песню, клип для Suno, в стиле карандаша / мела / лубка; cartoon, animation, animated explainer, reel, intro, motion graphics, hand-drawn video, music video / lyric video for my song, bring my drawing to life."
 argument-hint: "[story] [style/palette] [format 9:16|16:9|1:1|4:5] [length, s]"
 license: MIT
 compatibility: "Claude Code. Needs Node.js 22+, FFmpeg, Python 3.9+ with numpy, scipy and Pillow; HyperFrames downloads a headless Chrome on first use. Optional: piper-tts for narration. On Windows run the scripts from Git Bash."
@@ -28,6 +28,9 @@ commands from inside the project directory.
 | Command | What it does |
 |---|---|
 | `cartoon new <dir> --format 9:16 --duration 12 --palette neon --title T [--template 2d\|3d\|photo3d] [--lang ru]` | new project; the starter scene works in every format |
+| `cartoon new <dir> --template clip --format 16:9 --song s.mp3 --lyrics l.txt [--vocals v.wav \| --lrc s.lrc]` | a clip to a song: length from the song, parts + lyric lines laid out |
+| `cartoon song [--lrc audio/song.lrc \| --auto]` | clip: parts of the song + lyric lines -> `cues.js`; `song.map.png`, `lyrics-preview.mp4` |
+| `cartoon cut reel --auto --format 9:16` | clip: a cut (the chorus for Reels) as `cuts/reel/`, generated |
 | `cartoon example [name] [dir]` | list / build a bundled example (the best place to copy patterns from) |
 | `cartoon lint`, `cartoon snapshot --at 0,3.9`, `cartoon render --output out.mp4` | HyperFrames, pinned |
 | `cartoon audio` | soundtrack from `cues.js`: effects + music mood + voice + your tracks -> `audio/mix.wav` |
@@ -53,6 +56,7 @@ Read a reference when you reach its step:
 - `references/recipes.md` — tested story recipes (bring a drawing to life, dive into a picture, two worlds, photo + 3D)
 - `references/storyboard.md` — story and storyboard rules, table template
 - `references/sound.md` — effect types, music moods, narration, your music and the beat
+- `references/song-clip.md` — **a clip to a song**: parts, lyric timing (stem / LRC), song time, the cut
 - `references/references-and-hybrid.md` — learning from reference videos, rotoscope hybrid
 - `references/hyperframes.md` — the HyperFrames contract, CLI, install, lint errors
 - `references/qa.md` — what to check in frames and in the final file
@@ -69,7 +73,10 @@ Find out: the story (offer 2–3 ideas), style and palette (show `assets/themes.
 narration / silent / their music), references (3–5 videos in one manner), brand (logo/fonts/colours).
 If the project has a CLAUDE.md or a brand book, take colours, fonts and logo from it.
 If they bring a child's drawing or a photo: ask who is in it and what should happen to it, and plan
-the `photo3d` template or the recipes in `references/recipes.md`. Treat photos of real people,
+the `photo3d` template or the recipes in `references/recipes.md`.
+If they want a clip to a song: ask for the song file, the lyrics with their tags as in Suno/Udio, the
+vocal stem (Suno: Get Stems) or an LRC, the full clip and/or a cut for Reels, and the worlds for verse and
+chorus — then follow `references/song-clip.md` (template `clip`). Treat photos of real people,
 especially children, as private: never publish them anywhere.
 
 ### 1. Environment (once per machine)
@@ -87,7 +94,8 @@ Rules (`references/storyboard.md`), in short:
 - up to 15 s — one continuous scene in 3–4 phases; from 20 s — a chain of scenes, the last object of a
   scene becomes the first object of the next (several worlds: `Sketch.sequence`);
 - **one twist** (click, hit, flash, dive) at 35–45 % of the length: before it quiet, small, cold;
-  after it bright, big, warm; keep the `warm` accent for the payoff;
+  after it bright, big, warm; keep the `warm` accent for the payoff (a clip: the twist is the first chorus,
+  the storyboard is by parts of the song, see `references/storyboard.md`);
 - the last 3 s are a **poster**: all text written, nothing fast moves;
 - **the first frame is not empty** (it is the autoplay cover): start drawing before 0 (negative `t`).
 Show the story and storyboard to the user unless they chose STOP.
@@ -119,7 +127,9 @@ separate critic agent that has not seen the code (only if the user agrees to spe
 ### 6. Sound
 `cartoon audio` after EVERY timing change in `cues.js`. Narration: `voice` cues with `text`, then
 `cartoon voice --fit` and `cartoon audio` (music ducks under the voice). Their song: put it in `audio/`,
-`cartoon beats audio/song.mp3 --snap cues.js` (look at the PNG map), then `cartoon audio`.
+`cartoon beats audio/song.mp3 --snap cues.js` (look at the PNG map), then `cartoon audio`. A clip:
+`cartoon song` already put the song in; check the lines in `lyrics-preview.mp4` before rendering (you
+cannot listen: ask the user to watch it, or say the timing was checked on the map only).
 Target −16…−14 LUFS, peak <= −1 dBFS.
 
 ### 7. Render and hand over
@@ -129,6 +139,8 @@ cartoon check out.mp4 --duration <L> --fps 24 --size 1080x1920
 cartoon frames out.mp4 --jumps --cues cues.js
 cartoon sheet out.mp4 -n 12
 ```
+A clip: render the cut first (`cartoon cut reel --auto --format 9:16`, then render inside `cuts/reel`),
+the full song takes ~4 min per minute of video.
 Look at `out.first.png`, `out.last.png` and the sheet. Hand over: the MP4 path, the story second by
 second, the palette, what you hear, and **honestly what you did not check** (e.g. you did not listen
 to the sound). `cartoon share out.mp4` makes a light copy for messengers. End with 2–3 options for

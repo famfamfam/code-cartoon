@@ -75,6 +75,50 @@ jobs:
             ${{ runner.temp }}/p/out.sheet.jpg
           if-no-files-found: ignore
 
+  clip:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Python packages
+        run: pip install numpy scipy pillow
+      - name: Headless Chrome for HyperFrames
+        run: npx --yes hyperframes@0.8.164 browser ensure
+      - name: Song-clip example (demo song) and a 9:16 cut of its chorus
+        run: |
+          C="$GITHUB_WORKSPACE/skills/code-cartoon/scripts/cartoon"
+          "$C" example song-clip "$RUNNER_TEMP/clip"
+          cd "$RUNNER_TEMP/clip"
+          "$C" lint
+          "$C" cut ci --from chorus1 --len 4 --format 9:16
+      - name: Render and check the cut
+        working-directory: ${{ runner.temp }}/clip/cuts/ci
+        run: |
+          C="$GITHUB_WORKSPACE/skills/code-cartoon/scripts/cartoon"
+          "$C" lint
+          "$C" render --fps 24 --quality draft --output ci.mp4
+          D=$(python -c "import json, re; t = open('cues.js', encoding='utf-8').read(); print(json.loads(re.search(r'/\*JSON-START\*/(.*)/\*JSON-END\*/', t, re.S).group(1))['duration'])")
+          "$C" check ci.mp4 --duration "$D" --fps 24 --size 1080x1920
+          "$C" frames ci.mp4 --jumps --cues cues.js
+          "$C" sheet ci.mp4 -n 6
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: render-clip-cut
+          path: |
+            ${{ runner.temp }}/clip/song.map.png
+            ${{ runner.temp }}/clip/cuts/ci/ci.mp4
+            ${{ runner.temp }}/clip/cuts/ci/ci.sheet.jpg
+          if-no-files-found: ignore
+
   windows:
     runs-on: windows-latest
     defaults:

@@ -15,6 +15,9 @@ else bad "Node.js" "install Node 22+ from nodejs.org"; fi
 command -v npx >/dev/null && ok "npx" || bad "npx" "comes with Node.js"
 command -v ffmpeg >/dev/null && ok "ffmpeg $(ffmpeg -version 2>/dev/null | head -1 | awk '{print $3}')" || bad "ffmpeg" "macOS: brew install ffmpeg; Ubuntu: apt install ffmpeg; Windows: winget install Gyan.FFmpeg"
 command -v ffprobe >/dev/null && ok "ffprobe" || bad "ffprobe" "ships with ffmpeg"
+if command -v ffmpeg >/dev/null; then
+  ffmpeg -hide_banner -filters 2>/dev/null | grep -q " subtitles " && ok "ffmpeg libass (song clips: lyrics-preview.mp4)"     || opt "ffmpeg without libass (only for the lyrics preview of song clips)" "use a full ffmpeg build (Windows: winget install Gyan.FFmpeg; Ubuntu: apt install ffmpeg)"
+fi
 if [ -n "$PY" ]; then
   ok "Python $("$PY" -c 'import sys; print(sys.version.split()[0])') ($PY)"
   for m in numpy scipy PIL; do

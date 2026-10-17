@@ -38,3 +38,16 @@ A good short video = one idea and one transformation. Test: can you retell it in
 | 7–10 | poster | still | music |
 
 Translate the table into `cues.js` 1:1: one row = one event with `id`, `t`, `dur`, `type`.
+
+## Clips to a song
+The song sets the timing; the storyboard is by **parts**, not by seconds (`cartoon song` prints them):
+| part | bars | time | world / palette | camera | motif / what grows | lyrics style | transition in |
+|---|---|---|---|---|---|---|---|
+| intro1 | 2 | 0–4.8 | pencil sketch of the motif, the title | still, 0.96 | a ray per beat | — | — |
+| verse1 | 4 | 4.8–13.5 | graphite landscape, a new object per bar | travels one object per bar | — | write | iris |
+| **chorus1** | 4 | **13.5**–22.2 | neon sun = the motif | kick on every bar | sparkle per beat | karaoke | flash |
+| chorus2 | 4 | 31–39.7 | the same sun, bigger, a second ring | closer | the payoff (`sec.last`) | karaoke | flash |
+| outro1 | 3 | 39.7–end | poster: the sun + the title | still | nothing fast | — | iris |
+Rules: the twist is the first chorus; the chorus motif grows with each repeat; something new on every bar,
+small hits on beats, big changes only between parts; a cut for Reels = one bar before a chorus to its end.
+Details: `references/song-clip.md`.

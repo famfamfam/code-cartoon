@@ -7,6 +7,9 @@ picture and sound cannot drift. Deterministic (seeded), no samples, no stock lib
     python synth_audio.py <project_dir> [--lufs -15] [--peak -1] [--no-music] [--seed 7]
     (or simply: cartoon audio)
 
+A cut of a clip (cues "window": {"from", "to"}, written by `cartoon cut`) mixes that stretch of
+song time: every event and track keeps its song time, the cut fades in 20 ms and out 1.5 s.
+
 Mix = sound effects (event types) + synthesized music bed (music.mood) + voice lines
 (audio/voice/<id>.wav made by voice.py) + your own tracks (cues "tracks"). Tracks marked
 "duck": true and voice lines push the music and effects down while they play.
@@ -469,6 +472,8 @@ def main():
     project = Path(a.project)
     cues = load_cues(project)
     total = float(cues["duration"])
+    win = cues.get("window") or {}
+    off = float(win.get("from", 0))  # a cut: song time -> time in the cut
     N = int(total * SR) + SR
     sfx, music, voice, tracks = (np.zeros((N, 2)) for _ in range(4))
     ids = [e.get("id") for e in cues["events"]]
@@ -478,11 +483,12 @@ def main():
 
     report, missing_voice = [], []
     for e in cues["events"]:
-        typ, t0, dur = e.get("type", "none"), float(e["t"]), float(e.get("dur", 0.4))
-        if typ in ("none", "caption"):
+        typ, t0, dur = e.get("type", "none"), float(e["t"]) - off, float(e.get("dur", 0.4))
+        if typ in ("none", "caption", "lyric"):
             continue
         if t0 >= total:
-            print(f"  ! cue {e['id']} at {t0:.2f}s is past the end ({total:.2f}s) -- skipped")
+            if not win:  # in a cut, events after its window are expected
+                print(f"  ! cue {e['id']} at {t0:.2f}s is past the end ({total:.2f}s) -- skipped")
             continue
         if typ == "voice":
             f = project / "audio" / "voice" / f"{e['id']}.wav"
@@ -524,7 +530,7 @@ def main():
 
     mus = cues.get("music", {})
     if mus.get("enabled") and not a.no_music:
-        tw = next((float(e["t"]) for e in cues["events"] if e["id"] == mus.get("twist", "twist")), total)
+        tw = next((float(e["t"]) - off for e in cues["events"] if e["id"] == mus.get("twist", "twist")), total)
         bed = music_bed(np.random.default_rng(a.seed + 1), mus, total, tw) * db(mus.get("gain", -6))
         music[: len(bed)] += bed
 
@@ -534,8 +540,11 @@ def main():
         if not f.exists():
             print(f"  ! track {tr['file']} not found -- skipped")
             continue
-        x = load_audio(f, SR, 2)[int(float(tr.get("from", 0)) * SR):] * db(tr.get("gain", 0.0))
-        start = int(float(tr.get("t", 0)) * SR)
+        t_in, skip = float(tr.get("t", 0)) - off, float(tr.get("from", 0))
+        if t_in < 0:  # the cut starts inside this track
+            skip, t_in = skip - t_in, 0.0
+        x = load_audio(f, SR, 2)[int(skip * SR):] * db(tr.get("gain", 0.0))
+        start = int(t_in * SR)
         if start < len(tracks):
             end = min(len(tracks), start + len(x))
             (voice if tr.get("duck") else tracks)[start:end] += x[: end - start]
@@ -553,6 +562,11 @@ def main():
 
     out = (sfx + music + tracks + voice)[: int(total * SR)]
     out = highpass(out.T, 30).T  # remove DC / sub rumble
+    if win:  # a cut: no click at the start, a fade at the end
+        n_in, n_out = int(0.02 * SR), min(len(out), int(float(win.get("fade", 1.5)) * SR))
+        out[:n_in] *= np.linspace(0, 1, n_in)[:, None]
+        if n_out:
+            out[len(out) - n_out:] *= np.linspace(1, 0, n_out)[:, None] ** 1.5
     silent = np.max(np.abs(out)) < 1e-6
     # loudness to target, true peak under the ceiling; iterate because limiting lowers loudness
     ceil = db(a.peak - 0.3)

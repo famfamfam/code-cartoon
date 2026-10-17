@@ -36,8 +36,16 @@ The child must recognise **their** drawing and **themselves**.
 - Twist = the dive (35–45 %). The 3D world is toy-like on purpose: the realism is the photo.
 - Narration: `voice` cues + `cartoon voice --fit` + `cartoon audio`.
 
-## A reel cut to their song
+## A short reel cut to their song (no lyrics on screen)
 - Put the song in `audio/`, `cartoon beats audio/song.mp3 --snap cues.js --grid bar --twist`.
 - Look at `song.beats.png`: bars, energy, the twist candidate (the strongest rise in the middle).
 - Events marked `"snap": "beat"` or `"bar"` move onto the grid; the twist lands on the drop.
 - `cartoon audio` mixes the song with soft effects (synthesized music is switched off).
+
+## A clip to a song (parts, lyrics, a cut for Reels)
+- `cartoon new my-clip --template clip --song s.mp3 --lyrics l.txt --vocals v.wav` (Suno: tags in the
+  text, stems for the voice). Check `song.map.png` and `lyrics-preview.mp4` before any drawing.
+- One world per kind of part (`Sketch.songScenes`): verses cold and travelling (a new thing per bar),
+  the chorus a warm motif that grows with every repeat, the bridge a third world, the outro a poster.
+- Lyrics with `Sketch.fx.lyric` in the style of the world. Then `cartoon cut reel --auto --format 9:16`.
+- Example: `cartoon example song-clip` (a synthesized demo song). Full guide: `references/song-clip.md`.

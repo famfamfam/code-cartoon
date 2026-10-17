@@ -66,6 +66,13 @@ Engines:
   event), `--twist` puts the twist on the candidate; synthesized music is switched off and the song is
   added to `tracks`.
 
+## A clip to a song
+`cartoon song --song s.mp3 --lyrics l.txt [--vocals v.wav | --lrc s.lrc]` goes further than `beats`: the
+parts of the song, every lyric line ("lyric" cues, silent in the mix), the song in `tracks`, synthesized
+music off, the length of the video = the song. Effects you add stay quiet under it (−8…−12 dB): the song
+is already mastered. A cut (`cartoon cut`) mixes only its stretch of the song with a 20 ms fade in and a
+1.5 s fade out. Everything else: `references/song-clip.md`.
+
 ## Loudness and mix
 - Result: **−16…−14 LUFS** integrated (target −15), **true peak <= −1 dBFS** (soft limiter).
 - Frame-accurate within 40 ms because the time comes from the same constant. After any change of

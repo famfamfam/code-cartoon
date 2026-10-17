@@ -34,6 +34,7 @@ next free number).
 | 23 | a second world in another palette repaints wrong, or a cached picture changes colours | palettes switched by hand; a cache miss draws with the current world's palette | `Sketch.sequence` (one palette + paper per scene), `Sketch.withPalette`, `Sketch.cache(..., {palette})` pins the palette |
 | 24 | at a big zoom pencil lines become thick ropes and dance | width and wobble scale with the camera | built in: `Sketch.config.zoomComp = 0.75` (per call `zoomComp:false`); use `d.useCamera` for worlds with their own camera so the zoom is known |
 | 26 | a flying object passes over a standing one | paths not checked against other objects' places | check every stop/hover on the sheet; separate them by height or draw the far one first |
+| 47 | during an iris the old world's glow (a neon sun, its lyrics) shines over the new world | the incoming paper covered only the ink layer | fixed in engine 1.2: the glow is cleared inside the circle; do the same in hand-made transitions |
 
 ## Text and fonts
 | # | symptom | cause | fix |
@@ -63,6 +64,17 @@ next free number).
 |---|---|---|---|
 | 9 | the render is silent | `<audio>` has no `id`, or no `audio/mix.wav` | an `id` + run `cartoon audio` |
 | 19 | loudness jumps from video to video | normalised by peak | `cartoon audio` normalises by LUFS (−15) + limiter |
+
+## Song clips
+| # | symptom | cause | fix |
+|---|---|---|---|
+| 48 | hits look a drawing late, the picture feels behind the beat | on twos the 12/s grid ignores the beat (up to 83 ms late) | beatLock (on by default with a song): a new drawing starts on every beat |
+| 49 | lyric lines are off by a line or more | Suno sang something else than its text, or no stem was given | make `lyrics.txt` say what is sung; give `--vocals` (Suno: Get Stems) or fix `audio/song.lrc` + `cartoon song --lrc audio/song.lrc`; check `lyrics-preview.mp4` |
+| 50 | a part starts a bar or two off | two parts with the same texture (same drums and chords) | look at `song.map.png`; an LRC places parts by their first line; check the tags against what is sung |
+| 51 | the grid runs at half/double speed or bars are shifted by two beats | the tracker locked to half time; bass equal on 1 and 3 | `cartoon song --bpm-min/--bpm-max` around the real tempo; check the bar numbers on the map against the chorus |
+| 52 | a cut starts mid-word or ends with a click | cut at an arbitrary second | `cartoon cut` cuts on bar lines (one bar before the chorus), fades in 20 ms and out 1.5 s |
+| 53 | the clip is quieter than the song in Suno | the mix is normalised to −15 LUFS; Suno masters at −9…−12 | expected (platforms normalise to −14 anyway); do not stack loud effects on the song |
+| 54 | lyrics run under the Reels interface in a 9:16 cut of a 16:9 clip | lyrics placed in fixed pixels | place them with `Sketch.fx.lyric` / `Sketch.safe()`; layout from the frame size |
 
 ## Rotoscope
 | # | symptom | cause | fix |

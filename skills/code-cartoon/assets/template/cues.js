@@ -5,7 +5,7 @@
  *
  * Event fields: id (unique), t (seconds; negative = "already drawing at frame 0"),
  *   type: scribble | write | hatch | erase | click | tick | thump | pop | whoosh | chime | sparkle |
- *         swell | paper | page | rumble | magic | wind | voice | caption | none
+ *         swell | paper | page | rumble | magic | wind | voice | caption | lyric | none
  *   dur (seconds, for continuous sounds), gain (dB), pan (-1..1)
  *   voice / caption: "text": "..." — `cartoon voice` speaks it, d.caption(id) shows it.
  * "music": synthesized bed — cold before the twist, warm after it.

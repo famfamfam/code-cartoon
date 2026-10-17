@@ -135,6 +135,34 @@ Sketch.roto.draw(ctx, "hero", { k, t, x, y, w, h, color:"line", hatch:true, hatc
 (from `t` to `t + dur`, plus a short hold and fade); `Sketch.captionsAt(t)` returns all of them. Voice
 cues get their `dur` from `cartoon voice --fit`, so the text matches the speech.
 
+## Song clips (cues "song" from `cartoon song`)
+```js
+Sketch.mount({
+  palette: "neon",
+  scenes: Sketch.songScenes({                       // one world per kind of part; "*" = everything else
+    verse:  { palette: "graphite", camera: (t, l) => cam, draw: (d, l) => {} },
+    chorus: { palette: "neon", draw(d, l) { const big = 1 + 0.2 * l.sec.n; /* l.sec.last = the payoff */ } },
+    "*":    { palette: "graphite", draw: drawVerse },
+  }),
+});
+```
+| call | returns |
+|---|---|
+| `d.beat` / `Sketch.beat(t)` | `{ i, t0, len, phase, bar, beatInBar, barPhase, bpm }` on the song's grid (extended before/after) |
+| `d.pulse(o)` / `Sketch.pulse(t, o)` | 1 on a hit, decaying: `{ grid: "beat"\|"bar"\|"half", decay: 0.22, accent: [1,.55,.8,.55] }` |
+| `d.energy` / `Sketch.energy(t)` | loudness of the song 0..1 |
+| `d.sec` / `Sketch.section(t)` | `{ id: "chorus2", label, n, of, last, i, from, to, bars, t, p }` |
+| `d.cue("chorus2")`, `d.cueEnd(...)` | start / end of a part (events with that id win) |
+| `d.lyric(o)` / `Sketch.lyrics.at(t, o)` | the line on screen: `{ text, words: [{w,t0,t1,p}], sung, p, alpha, next, backing }` or null |
+| `Sketch.fx.lyric(ctx, line, o)` | draws it, frame pixels (inside `d.screen`): `style: "write"\|"karaoke"\|"stamp"\|"ribbon"`, `x, y, font, color, sungColor, restColor, maxWidth` |
+| `Sketch.safe()` | `{ x, y, w, h }` the area platform interfaces leave free (9:16: bottom 15 %, right 12 %, top 8 %) |
+| `Sketch.cam.kick(cam, pulse, 0.03)` | the camera punches in on a hit |
+| `d.window` | `{ from, to, cut, left }` — in a cut (`cartoon cut`) the stretch of song it shows |
+Transitions of `songScenes`: into a chorus a soft flash (1 beat), into another kind an iris (2 beats), the
+same kind again a cut; `in:` per kind (or `(sec, prev) => ...`) overrides. **beatLock** (on with a song,
+`mount({ beatLock: false })`): on twos a new drawing starts exactly on every beat. Example and starter:
+`cartoon example song-clip`, `--template clip`; the whole pipeline: `references/song-clip.md`.
+
 ## Palettes
 `Sketch.usePalette(name)`, `Sketch.withPalette(name, fn)`, `Sketch.col(role, a)`, `Sketch.has(role)`,
 `Sketch.mix(hex1, hex2, k)`, `Sketch.rgba(hex, a)`. Roles: `paper tooth line soft guide a1 a2 a3 warm` +

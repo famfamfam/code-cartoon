@@ -115,9 +115,10 @@ def analyse(path, bpm_min=60, bpm_max=190):
     }, x
 
 
-def song_map(res, x, out_png):
+def song_map(res, x, out_png=None, width=1600):
+    """the song map image (saved when out_png is given); song.py draws sections and lines under it"""
     from PIL import Image, ImageDraw
-    Wd, Ht, pad = 1600, 420, 40
+    Wd, Ht, pad = width, 420, 40
     im = Image.new("RGB", (Wd, Ht), (250, 248, 242))
     d = ImageDraw.Draw(im)
     dur = res["duration"]
@@ -145,7 +146,9 @@ def song_map(res, x, out_png):
         d.line([(tx, pad - 20), (tx, Ht - 10)], fill=(224, 144, 42), width=4)
         d.text((tx + 6, Ht - 30), f"twist? {res['twist_candidate']:.2f}s", fill=(224, 144, 42))
     d.text((pad, 8), f"{Path(res['file']).name}  {res['bpm']:.1f} BPM  {dur:.1f}s  bars: grey lines, every 4th numbered; blue = energy", fill=(30, 30, 30))
-    im.save(out_png)
+    if out_png:
+        im.save(out_png)
+    return im
 
 
 def snap(res, cues_path, grid, all_events, tol, twist):

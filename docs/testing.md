@@ -2,11 +2,15 @@
 
 ## Automatic
 - `skills/code-cartoon/scripts/cartoon selfcheck` — palettes and roles, template timings, fonts and
-  licences, JS syntax, privacy scan, beat tracker on a 120 BPM click track, a fresh project's soundtrack.
+  licences, JS syntax, privacy scan, beat tracker on a 120 BPM click track, Suno lyrics and LRC parsing,
+  the song analysis on a synthesized demo song with known answers (parts on the right bars with the vocal
+  stem, without it, from an LRC and from the music alone; line starts within a beat / a bar), a fresh
+  project's soundtrack.
 - `claude plugin validate . --strict` — the plugin and marketplace manifests.
 - CI (`.github/workflows/ci.yml`) runs both, shellcheck and Python syntax checks, and renders the 2d, 3d
-  and photo3d starters for 3 s on Ubuntu (`cartoon check` + `cartoon frames --jumps`). On Windows it
-  builds a project and its soundtrack.
+  and photo3d starters for 3 s on Ubuntu (`cartoon check` + `cartoon frames --jumps`), builds the
+  `song-clip` example and renders a 9:16 cut of its chorus. On Windows it builds a project and its
+  soundtrack.
 
 ## Skill behaviour (`claude plugin eval`)
 `evals/` holds cases for `claude plugin eval .`: the skill must start on Russian and English requests
@@ -32,4 +36,5 @@ first batch of questions unless the prompt says otherwise.
 | photo + 3D | My child's drawing (refs/drawing.jpg) and photo (refs/kid.jpg): a fairy tale where the child flies into the drawing | `--template photo3d`; ellipses around the drawing's objects; the photo never leaves the folder; `cartoon frames --twitch` on the faces |
 | narration | add a narrator to any of the above | `cartoon voice --fit`; ducking reported by `cartoon audio`; captions match the speech |
 | song | Cut it to audio/song.mp3 | `cartoon beats --snap`; the song in `tracks`; the twist on the drop |
+| song clip | Make a clip to my Suno song (song.mp3, lyrics.txt with tags, vocals.wav), 16:9, and the chorus for Reels | asks for the lyrics/stem/formats first; `--template clip`; `song.map.png` parts match the tags; the user is asked to watch `lyrics-preview.mp4` (or told the timing was checked on the map only); a storyboard by parts; the chorus grows; `cartoon cut reel --auto --format 9:16`; lyrics never in the bottom 15 % of the cut; `cartoon check` length = the song / the cut |
 | no trigger | Generate a video of my cat with Sora | the skill is not used |

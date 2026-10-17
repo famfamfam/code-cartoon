@@ -13,7 +13,7 @@ Coordinates are video pixels (x, y of the top-left corner, width, height).
           median; frames that differ far more than the usual line boil are listed. Catches a pupil
           that jumps, a sprite that gets clipped, a texture that flickers.
 --jumps   whole-frame changes that are much bigger than their neighbours and do NOT sit on a cue
-          time (cues.js events, ±0.15 s) — unplanned pops and flashes.
+          time (cues.js events, parts of the song and lyric lines, ±0.15 s) — unplanned pops and flashes.
 Needs ffmpeg, numpy, Pillow.
 """
 import argparse, json, re, subprocess, sys
@@ -77,9 +77,15 @@ def cue_times(path):
         return np.array([])
     txt = Path(path).read_text(encoding="utf-8")
     m = re.search(r"/\*JSON-START\*/(.*)/\*JSON-END\*/", txt, re.S)
-    ev = json.loads(m.group(1))["events"]
-    ts = [e["t"] for e in ev] + [e["t"] + e.get("dur", 0) for e in ev if e.get("dur")]
-    return np.array(ts)
+    cues = json.loads(m.group(1))
+    ev = cues["events"]
+    ts = [e["t"] for e in ev if e.get("type") != "lyric"] + [e["t"] + e.get("dur", 0) for e in ev if e.get("dur") and e.get("type") != "lyric"]
+    song = cues.get("song") or {}
+    two = 120.0 / float(song.get("bpm") or 120)  # a transition between parts lasts up to two beats
+    for s in song.get("sections", []):  # a new part of the song changes the picture for a while
+        ts += list(np.arange(s["t"], s["t"] + two + 0.1, 0.1))
+    ts += [e["t"] for e in ev if e.get("type") == "lyric"]  # a lyric line appears
+    return np.array(ts) - float((cues.get("window") or {}).get("from", 0))  # a cut: song time -> video time
 
 
 def main():
