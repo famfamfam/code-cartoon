@@ -169,7 +169,7 @@ See [docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## Status
 
-Version 1.2.0. Tested on Windows 11 (Git Bash) with Node 24, Python 3.14 and HyperFrames 0.8.164;
+Version 1.2.1. Tested on Windows 11 (Git Bash) with Node 24, Python 3.14 and HyperFrames 0.8.164;
 CI checks the scripts and renders the templates on Ubuntu and checks the scripts on Windows. The song
 analysis is tested on a synthesized song with known answers and was used on a real 2.5-minute
 instrumental (a dogfight clip in pencil 3D); tell us how it does on yours.

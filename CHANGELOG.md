@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.2.1 — 2026-10-17
+
+Fixes from a code review of 1.2.0.
+
+- `P3.flight`: a plane that speeds up from rest is no longer taken for a jump in its path (its bank lagged
+  for the first ~0.2 s). A jump is now a step 4x faster than any step before it, not than the speed at `t`.
+- `P3.flight`: when the time window collapses to a point (a shot one drawing long), the speed is right
+  again (it was 1000x too small).
+- `P3.lag`: `n = 1` means no lag (it gave NaN).
+- `cartoon frames --around` no longer crashes near the end of a video: tiles past the end show the last
+  frame, labelled "end"; `--zoom` too.
+- `cartoon frames --jumps`: changes that each sit on their own cue (a cut, then a lyric line 0.3 s later)
+  are not reported as a cut that settles; a burst spans 0.5 s from its first change; the suggested
+  `--around` commands list every problem spot in time order, eight per command.
+
 ## 1.2.0 — 2026-10-17
 
 Lessons from a real song: a 2.5-minute instrumental clip (a WWII dogfight in coloured-pencil 3D).

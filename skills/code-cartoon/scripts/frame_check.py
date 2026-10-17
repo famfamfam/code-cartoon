@@ -23,12 +23,13 @@ Coordinates are video pixels (x, y of the top-left corner, width, height).
           cut this way (the last drawings of a shot and the first of the next).
 Needs ffmpeg, numpy, Pillow.
 """
-import argparse, json, re, subprocess, sys
+import argparse, functools, json, re, subprocess, sys
 from pathlib import Path
 
 import numpy as np
 
 
+@functools.lru_cache(maxsize=None)
 def probe(v):
     p = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate",
                         "-show_entries", "format=duration", "-of", "json", str(v)], capture_output=True, text=True)
@@ -68,6 +69,8 @@ def gray_frames(v, t0=None, t1=None, crop=None, width=None):
 def frame_at(v, t):
     from PIL import Image
     import io
+    W, H, fps, dur = probe(v)
+    t = min(max(0.0, t), max(0.0, dur - 1.5 / fps))     # past the end ffmpeg returns no frame at all
     p = subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-ss", f"{t:.3f}", "-i", str(v), "-frames:v", "1",
                         "-f", "image2pipe", "-vcodec", "png", "-"], capture_output=True)
     return Image.open(io.BytesIO(p.stdout)).convert("RGB")
@@ -104,7 +107,8 @@ def around(v, times, out):
     from PIL import Image, ImageDraw
     rows = []
     for t0 in times:
-        rows.append([(t, frame_at(v, max(0.0, t))) for t in [t0 + k / 12 for k in range(-3, 6)]])
+        rows.append([(t, frame_at(v, t)) for t in [t0 + k / 12 for k in range(-3, 6)]])
+    dur = probe(v)[3]
     tw = 320
     th = int(rows[0][0][1].height * tw / rows[0][0][1].width)
     sheet = Image.new("RGB", (tw * len(rows[0]), (th + 18) * len(rows)), (24, 24, 24))
@@ -112,7 +116,8 @@ def around(v, times, out):
     for r, row in enumerate(rows):
         for c, (t, im) in enumerate(row):
             sheet.paste(im.resize((tw, th)), (c * tw, r * (th + 18) + 18))
-            dr.text((c * tw + 4, r * (th + 18) + 3), f"{t:.3f}s", fill=(255, 210, 120) if c == 3 else (220, 220, 220))
+            label = f"{t:.3f}s" if 0 <= t < dur else ("start" if t < 0 else "end")   # outside the video: its first/last frame
+            dr.text((c * tw + 4, r * (th + 18) + 3), label, fill=(255, 210, 120) if c == 3 else (220, 220, 220))
     sheet.save(out, quality=88)
     print(f"around: {out}  ({len(rows)} rows: 3 drawings before each time, 5 from it) — open it and look at every row")
 
@@ -201,26 +206,28 @@ def main():
         print(f"jump check: {len(f)} frames; {int(flags.sum())} big changes, {int((flags & expected).sum())} on cues, {int(bad.sum())} unexpected")
         for t, dd in zip(ts[bad], d[bad]):
             print(f"  ! {t:7.3f}s  change {dd:.1f}/255 (around it {local[list(ts).index(t)]:.1f}) — not on any cue")
-        # several big changes within half a second (outside part transitions): a cut that settles, or a swing
+        # several big changes within half a second (outside part transitions) of which at least one no cue explains:
+        # a cut that settles, or a swing. Changes that each sit on their own cue (a cut, then a lyric line) are fine.
         idx = [i for i in np.where(flags)[0] if not in_span[i]]
         groups, cur = [], []
         for i in idx:
-            if cur and ts[i] - ts[cur[-1]] > 0.5:
+            if cur and ts[i] - ts[cur[0]] > 0.5:
                 groups.append(cur)
                 cur = []
             cur.append(i)
         if cur:
             groups.append(cur)
-        settle = [g for g in groups if len(g) >= 2]
+        settle = [g for g in groups if len(g) >= 2 and any(bad[i] for i in g)]
         for g in settle:
             rc = 1
             print(f"  ! {ts[g[0]]:7.3f}s  {len(g)} big changes in {ts[g[-1]] - ts[g[0]]:.2f} s — a cut is one changed frame; this settles or swings "
                   "(a time window across the cut: speed, bank, a lagging camera? a camera that changed its subject?)")
         if bad.any() or settle:
             inside = {i for g in settle for i in g}
-            first = [round(float(ts[g[0]]), 2) for g in settle] + [round(float(ts[i]), 2) for i in np.where(bad)[0] if i not in inside]
-            pick = sorted(first[:8])
-            print(f"  look at every drawing: cartoon frames {v.name} --around " + ",".join(f"{t:.2f}" for t in pick))
+            spots = sorted([float(ts[g[0]]) for g in settle] + [float(ts[i]) for i in np.where(bad)[0] if i not in inside])
+            print("  look at every drawing:")
+            for j in range(0, len(spots), 8):
+                print(f"    cartoon frames {v.name} --around " + ",".join(f"{t:.2f}" for t in spots[j:j + 8]))
         if bad.any():
             rc = 1
             if a.out:

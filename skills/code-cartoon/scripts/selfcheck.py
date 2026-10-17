@@ -122,6 +122,21 @@ console.log(JSON.stringify([4, 4.8, 4.98, 5.02, 5.2, 6].map((t) => [t, Math.abs(
             check("pencil3d: a jump in a path does not bank the plane", ok, " ".join(f"{t}s {b:.0f}deg {v:.0f}m/s" for t, b, v in rows))
         except ValueError:
             check("pencil3d: a jump in a path does not bank the plane", False, (r.stderr or r.stdout)[-200:])
+        # ...and a plane that speeds up from rest is not a jump: its time window stays whole
+        start = r"""
+global.window = global; window.Sketch = {}; require(process.argv[2]);
+const P3 = window.P3, ss = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * u * (u * (6 * u - 15) + 10));
+const path = (t) => { const a = (160 * ss((t - 1) / 2)) / 80; return [80 * Math.sin(a), 0, 80 * (1 - Math.cos(a))]; };
+console.log(JSON.stringify([1.05, 1.15, 1.3].map((t) => P3.span(path, t, 0.3).map((x) => +(x - t).toFixed(3)))));
+"""
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "start.js").write_text(start, encoding="utf-8")
+            r = subprocess.run([node, str(Path(td) / "start.js"), str(SKILL / "assets/template/engine/pencil3d.js")], capture_output=True, text=True)
+        try:
+            spans = json.loads(r.stdout)
+            check("pencil3d: speeding up from rest is not a jump", all(lo == -0.3 and hi == 0.3 for lo, hi in spans), str(spans))
+        except ValueError:
+            check("pencil3d: speeding up from rest is not a jump", False, (r.stderr or r.stdout)[-200:])
     else:
         notes.append("node not found: JS syntax not checked")
 

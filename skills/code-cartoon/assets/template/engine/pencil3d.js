@@ -140,32 +140,38 @@
     if (roll) { u = rot(u, f, roll); r = rot(r, f, roll); }
     return { f, u, r };
   };
-  /** bank from the path: the lift (up) leans into the turn; path(t) -> [x, y, z] */
   /** the stretch of time around t where the path is continuous: [lo, hi] within t +- reach. A path that jumps
    *  (a new shot, a new pass, a teleport) is not a turn: whatever looks at a window of time (speed, bank, a camera
    *  that lags) must stop at the jump, or the plane turns sideways and the camera swings for a few drawings around
    *  every cut. o.from / o.to: the shot's own bounds, if known. */
   P3.span = function (path, t, reach, o = {}) {
     const d = 0.002, ref = Math.min(len(sub(path(t), path(t - d))), len(sub(path(t + d), path(t)))) / d;
-    const lim = 4 * ref + 5, n = 8;
+    const n = 8;
     let lo = t - reach, hi = t + reach;
-    for (const s of [-1, 1]) {                       // walk out from t; stop before the first step faster than 4x the speed
-      let prev = t, pp = path(t);
+    for (const s of [-1, 1]) {                       // walk out from t; stop before a step 4x faster than any so far
+      let prev = t, pp = path(t), vmax = ref;          // (so a plane that speeds up from rest is not a jump)
       for (let i = 1; i <= n; i++) {
-        const tt = t + (s * reach * i) / n, q = path(tt);
-        if (len(sub(q, pp)) / Math.abs(tt - prev) > lim) { if (s < 0) lo = prev; else hi = prev; break; }
-        prev = tt; pp = q;
+        const tt = t + (s * reach * i) / n, q = path(tt), v = len(sub(q, pp)) / Math.abs(tt - prev);
+        if (v > 4 * vmax + 5) { if (s < 0) lo = prev; else hi = prev; break; }
+        vmax = Math.max(vmax, v); prev = tt; pp = q;
       }
     }
     if (o.from !== undefined) lo = Math.max(lo, Math.min(t, o.from));
     if (o.to !== undefined) hi = Math.min(hi, Math.max(t, o.to));
     return [lo, hi];
   };
+  /** bank from the path: the lift (up) leans into the turn; path(t) -> [x, y, z] */
   P3.flight = function (path, t, o = {}) {
     const e = o.dt ?? 0.05, g = o.g ?? 3, win = o.win ?? 0.25;
     const [lo, hi] = P3.span(path, t, win + e, o), at = (tt) => path(Math.min(hi, Math.max(lo, tt)));
     const ta = Math.max(lo, t - e), tc = Math.min(hi, t + e), b = path(t);
-    const v = tc - ta > 1e-4 ? mul(sub(at(tc), at(ta)), 1 / (tc - ta)) : sub(path(t + 0.001), b), f = norm(v);
+    let v;
+    if (tc - ta > 1e-4) v = mul(sub(at(tc), at(ta)), 1 / (tc - ta));
+    else {                                           // the window collapsed to t: the one-sided difference without the jump
+      const d = 0.001, fw = mul(sub(path(t + d), b), 1 / d), bw = mul(sub(b, path(t - d)), 1 / d);
+      v = len(fw) <= len(bw) ? fw : bw;
+    }
+    const f = norm(v);
     // the lift, averaged over a short window: where it passes through zero (the slow top of a loop) the plane
     // rolls over smoothly instead of flipping in one drawing; gravity counts weakly (cartoon physics).
     // Only samples inside the continuous stretch count.
@@ -187,12 +193,14 @@
     const up = add(mul(u0, Math.cos(bank)), mul(r0, Math.sin(bank)));
     return { pos: b, vel: v, att: P3.attitude(f, norm(up), o.roll || 0) };
   };
-  /** a camera that lags: the mean of fn (a point, or anything that returns [x, y, z]) over the last `span` seconds,
-   *  never before `from` (the start of the shot). A chase camera aims at P3.lag(...) so a target that crosses close in
+  /** a camera that lags: the mean of fn(t) -> [x, y, z] (an aim point, a direction) over the last `span` seconds,
+   *  never before `from` (the start of the shot); n samples (n = 1: no lag). A chase camera aims at P3.lag(...) so a target that crosses close in
    *  front does not swing the frame in one drawing. Pure function of t. */
   P3.lag = function (fn, t, span = 0.4, from = -Infinity, n = 8) {
     let acc = [0, 0, 0];
-    for (let i = 0; i < n; i++) acc = add(acc, fn(Math.max(from, t - (span * i) / (n - 1))));
+    n = Math.max(1, Math.round(n));
+    const step = n > 1 ? span / (n - 1) : 0;
+    for (let i = 0; i < n; i++) acc = add(acc, fn(Math.max(from, t - step * i)));
     return mul(acc, 1 / n);
   };
   P3.camera = function (eye, target, fov = 40, o = {}) {
