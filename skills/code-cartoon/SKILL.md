@@ -1,6 +1,6 @@
 ---
 name: code-cartoon
-description: Makes animated videos as CODE (HTML canvas/JS, 3D with Three.js) rendered to MP4 with HyperFrames, with synthesized sound and optional narration. Hand-drawn styles (pencil, chalk, blueprint, notebook, kraft, neon), a child's crayons, Russian lubok print, retro halftone, newspaper collage, glass/chrome 3D, real photo + 3D pop-up stories, hybrid with a reference video (rotoscope), animated clips to a song (Suno/Udio) with the lyrics on the beat and a cut for Reels. Use when asked for a cartoon, animation, explainer, intro, reel/short, motion graphics "made with code", "in pencil / sketch style", "like this example", a music video / lyric video to their song, or to bring a drawing or a photo to life. Not for neural video generation (Sora/Veo/Kling), editing existing footage with subtitles, still images or slide decks.
+description: Makes animated videos as CODE (HTML canvas/JS, 3D with Three.js) rendered to MP4 with HyperFrames, with synthesized sound and optional narration. Hand-drawn styles (pencil, chalk, blueprint, notebook, kraft, neon), a child's crayons, Russian lubok print, retro halftone, newspaper collage, glass/chrome 3D, coloured-pencil 3D (planes, cars, clouds), real photo + 3D pop-up stories, hybrid with a reference video (rotoscope), animated clips to a song (Suno/Udio) with the lyrics on the beat and a cut for Reels. Use when asked for a cartoon, animation, explainer, intro, reel/short, motion graphics "made with code", "in pencil / sketch style", "like this example", a music video / lyric video to their song, or to bring a drawing or a photo to life. Not for neural video generation (Sora/Veo/Kling), editing existing footage with subtitles, still images or slide decks.
 when_to_use: "Triggers in any language, e.g. мультик, анимация кодом, рисованный ролик, рилс, заставка, эксплейнер, оживить рисунок, клип на песню, клип для Suno, в стиле карандаша / мела / лубка; cartoon, animation, animated explainer, reel, intro, motion graphics, hand-drawn video, music video / lyric video for my song, bring my drawing to life."
 argument-hint: "[story] [style/palette] [format 9:16|16:9|1:1|4:5] [length, s]"
 license: MIT
@@ -31,8 +31,10 @@ commands from inside the project directory.
 | `cartoon new <dir> --template clip --format 16:9 --song s.mp3 --lyrics l.txt [--vocals v.wav \| --lrc s.lrc]` | a clip to a song: length from the song, parts + lyric lines laid out |
 | `cartoon song [--lrc audio/song.lrc \| --auto]` | clip: parts of the song + lyric lines -> `cues.js`; `song.map.png`, `lyrics-preview.mp4` |
 | `cartoon cut reel --auto --format 9:16` | clip: a cut (the chorus for Reels) as `cuts/reel/`, generated |
+| `cartoon cut fight --from 41.8 --to 83.1 --size 1920x1080` | a draft of one part of a long video (staged review) |
 | `cartoon example [name] [dir]` | list / build a bundled example (the best place to copy patterns from) |
 | `cartoon lint`, `cartoon snapshot --at 0,3.9`, `cartoon render --output out.mp4` | HyperFrames, pinned |
+| `cartoon check-hf` | HyperFrames checks of the page: lists `page_error` (a frozen frame = an exception) |
 | `cartoon audio` | soundtrack from `cues.js`: effects + music mood + voice + your tracks -> `audio/mix.wav` |
 | `cartoon voice [--fit]` | speak `voice` cues (Piper, the OS voice, or your recordings) |
 | `cartoon beats song.mp3 [--snap cues.js]` | tempo, beats, bars, energy, twist candidate; snap events to the grid |
@@ -45,13 +47,15 @@ commands from inside the project directory.
 | `cartoon share out.mp4 --gif` | light MP4 + GIF/WebP preview |
 | `cartoon doctor` | check the machine |
 
-Engine and templates: `assets/template/engine/sketch.js` (2D), `assets/template-3d/` (glass and
-chrome), `assets/template-photo3d/` (+ `kit3d.js`). Palettes: `assets/template/engine/palettes.js`,
+Engine and templates: `assets/template/engine/sketch.js` (2D), `engine/pencil3d.js` (3D meshes and
+clouds drawn in coloured pencil inside the 2D engine), `assets/template-3d/` (glass and chrome),
+`assets/template-photo3d/` (+ `kit3d.js`). Palettes: `assets/template/engine/palettes.js`,
 preview `assets/themes.jpg`.
 
 Read a reference when you reach its step:
 - `references/styles.md` — the DNA of every style and which engine functions make it
 - `references/engine-api.md` — the 2D engine API, worlds and cameras, transitions
+- `references/pencil3d.md` — pencil 3D: meshes, clouds, flight simulation, guns, trails, cameras
 - `references/photo3d.md` — the photo + 3D template and kit3d
 - `references/recipes.md` — tested story recipes (bring a drawing to life, dive into a picture, two worlds, photo + 3D)
 - `references/storyboard.md` — story and storyboard rules, table template
@@ -76,7 +80,12 @@ If they bring a child's drawing or a photo: ask who is in it and what should hap
 the `photo3d` template or the recipes in `references/recipes.md`.
 If they want a clip to a song: ask for the song file, the lyrics with their tags as in Suno/Udio, the
 vocal stem (Suno: Get Stems) or an LRC, the full clip and/or a cut for Reels, and the worlds for verse and
-chorus — then follow `references/song-clip.md` (template `clip`). Treat photos of real people,
+chorus — then follow `references/song-clip.md` (template `clip`). **Read the music first**: you
+cannot hear it, so say that, run `cartoon song` and give a 3–5 sentence reading from its per-part table
+(key, loudness, brightness, bass, density), then ask what numbers cannot tell: the genre and lead
+instrument, the story the music tells, how it should end, what the cover means (often only palette and
+mood). Build the story on their answers, not on the title, and check the storyboard against the reading
+(a bright breakthrough over the darkest part, a victory over a minor fading end are contradictions). Treat photos of real people,
 especially children, as private: never publish them anywhere.
 
 ### 1. Environment (once per machine)
@@ -121,7 +130,12 @@ Open `contact-sheet.jpg` and 2–3 frames at full size. For faces, eyes, small t
 `cartoon frames out.mp4 --zoom X,Y,W,H --at ...` and `--twitch` on what must hold still.
 Check by `references/qa.md`: the story reads without sound; text is big and not covered; the first frame
 is not empty, the last one is a poster; nothing jumps that should stand; the frame is not overloaded.
-Fix and shoot again. Do not show intermediate results. For important videos give the sheet to a
+A frame frozen from some time on (or an empty world) means the scene threw an exception: run
+`cartoon check-hf`, it lists `page_error`. Fix and shoot again. Do not show unchecked results.
+Long videos (over ~30 s, clips, 3D) go to the user **in stages**: keyframes, then a draft of each part
+(`cartoon cut <part> --from X --to Y --size WxH`, render inside `cuts/<part>`), then the full render.
+Keep every version the user has seen beside the new one (`out-v2.mp4` + `versions/v2/` with the
+sources); never overwrite it. For important videos give the sheet to a
 separate critic agent that has not seen the code (only if the user agrees to spend the extra run).
 
 ### 6. Sound
@@ -153,6 +167,6 @@ Add every caught mistake (yours or the user's find) to `references/pitfalls.md` 
 ## Limits (say them honestly)
 No photorealism and no live facial animation: code only depicts. A real person appears through a real
 photo (photo3d template), not through a 3D model of them. 3D by code means particles, geometry,
-logos, materials, toy-like objects — not Pixar. Live motion comes through the hybrid (a filmed or
+logos, materials, toy-like objects, pencil-drawn vehicles and clouds — not Pixar. Live motion comes through the hybrid (a filmed or
 generated clip -> `cartoon roto` -> redrawn in style). Build long videos from 10–30 s scenes: a couple of
 minutes is realistic, ten minutes in one go is not.

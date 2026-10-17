@@ -37,11 +37,12 @@ song), and the renders are attached to the [releases](https://github.com/famfamf
 | Lubok / Bilibin print | `lubok` | flat colour, bold contours, wave curls, ornament frames, ribbons |
 | Retro halftone, newspaper collage | `retro`, `collage` | print dots, misregistration, torn paper |
 | Glass and chrome 3D | `--template 3d` | Three.js materials, particles, logos |
+| Coloured-pencil 3D | `engine/pencil3d.js`, `sky`, `storm`, `dusk` | planes, cars and cumulus clouds in real 3D, drawn in coloured pencil with boiling outlines; a flight simulation for chases and dogfights |
 | Photo + 3D | `--template photo3d` | your photo with a living camera, a picture that pops up, a 3D world |
 | Rotoscope hybrid | any | a filmed or generated clip redrawn in the chosen style |
-| Clip to a song | `--template clip` | the parts of your song (Suno, Udio, your own) as worlds, the lyrics written as they are sung, a cut for Reels |
+| Clip to a song | `--template clip` | the parts of your song (Suno, Udio, your own, instrumentals too) as worlds, the lyrics written as they are sung, a cut for Reels |
 
-One storyboard, any format: 9:16, 16:9, 1:1, 4:5. Thirteen palettes; the same video recolours with one
+One storyboard, any format: 9:16, 16:9, 1:1, 4:5. Sixteen palettes; the same video recolours with one
 line. Preview of all palettes: [`skills/code-cartoon/assets/themes.jpg`](skills/code-cartoon/assets/themes.jpg).
 
 ## How it works
@@ -145,9 +146,12 @@ and keeps the console in UTF-8. You rarely type it yourself; Claude does.
 
 - No photorealism and no live facial animation. A real person appears as a real photo
   (photo + 3D template), never as a fake 3D model of them.
-- 3D made by code means particles, geometry, materials and toy-like objects, not feature animation.
+- 3D made by code means particles, geometry, materials, toy-like objects and pencil-drawn vehicles
+  and clouds, not feature animation.
 - Live motion comes through the rotoscope hybrid: a clip you filmed or generated elsewhere, redrawn in style.
-- Render time on a laptop: about 40 s for 8 s of 2D at 1080p, about 3.5 min for 40 s of photo + 3D.
+- Render time on a laptop: about 40 s for 8 s of 2D at 1080p, about 3.5 min for 40 s of photo + 3D,
+  11–16 min for a 2.5-minute clip with pencil 3D. Long clips are shown in stages (keyframes, a draft of
+  each part, then the full render).
   Long videos are built from 10–30 s scenes.
 - The renderer is HyperFrames 0.8.164; other versions may need small changes.
 
@@ -160,9 +164,10 @@ See [docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## Status
 
-Version 1.1.0. Tested on Windows 11 (Git Bash) with Node 24, Python 3.14 and HyperFrames 0.8.164;
+Version 1.2.0. Tested on Windows 11 (Git Bash) with Node 24, Python 3.14 and HyperFrames 0.8.164;
 CI checks the scripts and renders the templates on Ubuntu and checks the scripts on Windows. The song
-analysis is tested on a synthesized song with known answers; tell us how it does on yours.
+analysis is tested on a synthesized song with known answers and was used on a real 2.5-minute
+instrumental (a dogfight clip in pencil 3D); tell us how it does on yours.
 Planned: automatic object detection on a drawing photo, one project rendered to all formats at once.
 
 ## Contributing

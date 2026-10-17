@@ -146,9 +146,14 @@ def main():
     if a.jumps:
         f, ts, fps = gray_frames(v, a.t0, a.t1, width=320)
         d = np.concatenate([[0], np.mean(np.abs(np.diff(f, axis=0)), axis=(1, 2))])
+        # the local level of change: the median of the frames that changed (on twos every other frame repeats the
+        # drawing, and a median over those zeros would call any camera move in a 3D shot a jump)
         win = max(3, int(fps))
         pad = np.pad(d, win, mode="edge")
-        local = np.array([np.median(pad[i:i + 2 * win + 1]) for i in range(len(d))])
+        def level(w):
+            moving = w[w > 0.4]
+            return np.median(moving) if len(moving) >= 3 else np.median(w)
+        local = np.array([level(pad[i:i + 2 * win + 1]) for i in range(len(d))])
         k = a.k or 6.0
         flags = (d > local * k) & (d > 3.0)
         ct = cue_times(a.cues)
@@ -156,7 +161,7 @@ def main():
         bad = flags & ~expected
         print(f"jump check: {len(f)} frames; {int(flags.sum())} big changes, {int((flags & expected).sum())} on cues, {int(bad.sum())} unexpected")
         for t, dd in zip(ts[bad], d[bad]):
-            print(f"  ! {t:7.3f}s  change {dd:.1f}/255 (neighbours {np.median(d):.1f}) — not on any cue")
+            print(f"  ! {t:7.3f}s  change {dd:.1f}/255 (around it {local[list(ts).index(t)]:.1f}) — not on any cue")
         if bad.any():
             rc = 1
             if a.out:

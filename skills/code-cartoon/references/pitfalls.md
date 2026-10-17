@@ -59,6 +59,23 @@ next free number).
 | 41 | `Object.assign(mesh, { position })` throws in a module | Object3D `position` is read-only | `mesh.position.copy(v)` |
 | 42 | fresnel shader: black blotches on some GPUs (lint `shader_unbounded_cosine_pow`) | `pow(1 - max(dot,0), k)` can get a negative base | `pow(1.0 - clamp(dot(n, v), 0.0, 1.0), k)` |
 
+## Pencil 3D (`engine/pencil3d.js`, `references/pencil3d.md`)
+| # | symptom | cause | fix |
+|---|---|---|---|
+| 55 | a plane flips belly up / down in one drawing | the bank taken from the whole lift vector, which passes through zero over the top of a turn | bank only from the sideways acceleration, smooth and limited (`P3.flight` does it); a roll only on purpose (`roll`) |
+| 56 | a plane slides sideways or hangs in the air in a hard turn | a hand-made path turns faster than the speed allows | a flight simulation (g-limit, roll rate, speed lost in climbs) run once at load, `P3.track` |
+| 57 | the nose snaps onto the target before a burst / bullets fly 30° off the nose | aiming by turning the nose or by shooting at the target | bullets along `att.f` only; fire when the stream passes within ~18 m of where the target will be |
+| 58 | a straight line across the frame from the old place to the new one when a shot or pass changes | the trail sampled back across the jump | sample trails only from the start of the current shot (`since`) |
+| 59 | the sun bleaches the planes in front of it | the sun drawn on the glow layer (added over everything) | draw it first on the ink layer, behind the scene |
+| 60 | a far wing's outline shows through the body | all outlines drawn after all faces | part by part, far to near, each filled and outlined (built in); split big parts (wing halves) |
+| 61 | insignia vanish on a curved fuselage | the decal drawn with its face, a nearer face of the same part covered it | decals after all faces of their part (built in) |
+| 62 | clouds look like piles of balls | round, evenly shaded puffs | flattened bumpy puffs, own shade low in the cloud, a rim only on sunlit tops (`P3.cumulus`) |
+| 63 | the 3D world is black / wrong colours | meshes or clouds built at load, before `Sketch.mount` set the palette | build lazily on first use (`let m = null; const mesh = () => m \|\| (m = build())`) |
+| 64 | the camera goes through a puff and the screen turns white or black | a puff at the camera fills the frame | puffs fade near the camera (built in); keep the camera out of smoke trails |
+| 65 | the snapshot or render shows one frozen frame from some time on | the scene threw an exception (a shadowed helper name, an undefined value) | `cartoon check-hf` lists `page_error`; do not shadow helpers (`P`, `X`) with locals |
+| 66 | the chase camera shows empty sky | the target point far ahead of the chaser, or the planes split | look between chaser and target, distance from their separation; check the middle of every shot |
+| 67 | `cartoon frames --jumps` flags every camera move in 3D | on twos half the frames repeat; a median over the zeros called every move a jump | fixed: the baseline is the median of the frames that changed; camera cuts still count, add them as cue events |
+
 ## Sound
 | # | symptom | cause | fix |
 |---|---|---|---|

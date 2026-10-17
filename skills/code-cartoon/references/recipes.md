@@ -49,3 +49,17 @@ The child must recognise **their** drawing and **themselves**.
   the chorus a warm motif that grows with every repeat, the bridge a third world, the outro a poster.
 - Lyrics with `Sketch.fx.lyric` in the style of the world. Then `cartoon cut reel --auto --format 9:16`.
 - Example: `cartoon example song-clip` (a synthesized demo song). Full guide: `references/song-clip.md`.
+
+## A duel in the sky to an instrumental (pencil 3D)
+Tested on a 2.5-minute violin + electronics track: two WWII aces, 5 parts = 5 worlds.
+- Read the music with the user first (`references/song-clip.md`): here minor all the way, a heavier
+  fourth part, a darker sparse end -> "both strong, wounded, not broken; respect, nobody shot down".
+- Parts by hand: `cartoon song --parts "intro:0,fight:41.8,storm:1:23.1,clash:1:50.7,outro:2:18.3"`.
+- Intro in 2D pencil (the planes drawn on paper, then they come alive), then pencil 3D
+  (`references/pencil3d.md`): the fight as a flight simulation (who attacks changes by phrase), the
+  storm around a cloud tower, head-on passes (converge, fire, break: one always up, one always down),
+  the outro wing to wing with a wing waggle, then they split.
+- One planned hit each, snapped to a real alignment of the guns; damage as holes and smoke.
+- Insignia from the period, never a swastika: a red star; a Balkenkreuz on the rear fuselage.
+- Shown in stages: keyframes, then each part as a draft (`cartoon cut`), then the full render; every
+  version kept beside the last.

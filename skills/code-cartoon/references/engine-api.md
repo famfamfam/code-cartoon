@@ -163,6 +163,12 @@ same kind again a cut; `in:` per kind (or `(sec, prev) => ...`) overrides. **bea
 `mount({ beatLock: false })`): on twos a new drawing starts exactly on every beat. Example and starter:
 `cartoon example song-clip`, `--template clip`; the whole pipeline: `references/song-clip.md`.
 
+## Pencil 3D
+`engine/pencil3d.js` (loaded by the template after `sketch.js`) adds `P3`: meshes (`P3.mesh().loft()
+.wing().slab().fin().decal().rod().done()`), `P3.camera`, `P3.object`, `P3.puff`, `P3.cumulus`,
+`P3.flight` (a banked attitude from a path), `P3.track` (a path from simulated samples), `P3.line`
+(trails) and `P3.draw(d, cam, list, world)`. Draw it inside a normal scene; full guide: `pencil3d.md`.
+
 ## Palettes
 `Sketch.usePalette(name)`, `Sketch.withPalette(name, fn)`, `Sketch.col(role, a)`, `Sketch.has(role)`,
 `Sketch.mix(hex1, hex2, k)`, `Sketch.rgba(hex, a)`. Roles: `paper tooth line soft guide a1 a2 a3 warm` +

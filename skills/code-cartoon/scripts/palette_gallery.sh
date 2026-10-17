@@ -21,5 +21,6 @@ for pal in $LIST; do
   f=$(ls -t "$D"/.hyperframes/artifacts/snapshots/*/frame-00-*.png 2>/dev/null | head -1)
   [ -n "$f" ] && cp "$f" "$OUT/$pal.png" && echo "  $pal"
 done
-"$PY" "$SKILL_DIR/scripts/contact_sheet.py" "$OUT" --cols 5 --width 300 --no-safe -o "$P/palettes.jpg"
+N=$(ls "$OUT" | wc -l); COLS=$("$PY" -c "import math, sys; print(max(3, math.ceil(math.sqrt(int(sys.argv[1])))))" "$N")   # a square-ish grid
+"$PY" "$SKILL_DIR/scripts/contact_sheet.py" "$OUT" --cols "$COLS" --width 300 --no-safe -o "$P/palettes.jpg"
 rm -rf "$WORK" 2>/dev/null || true

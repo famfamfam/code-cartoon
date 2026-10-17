@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.2.0 — 2026-10-17
+
+Lessons from a real song: a 2.5-minute instrumental clip (a WWII dogfight in coloured-pencil 3D).
+
+- **Pencil 3D (`engine/pencil3d.js`, loaded by the 2D template):** meshes (bodies, airfoil wings,
+  plates, struts) seen through a camera and drawn in coloured pencil — sunlit fills, hatching and
+  cross-hatching in the shade, boiling outlines along silhouettes and creases, part by part so a near
+  part covers a far one; insignia and damage-only decals; cumulus clouds from flattened bumpy puffs that
+  fade when the camera flies through; `P3.flight` (bank from the sideways acceleration, never flips) and
+  `P3.track` (a path from a flight simulation run once at load). Guide: `references/pencil3d.md`.
+- **Reading the music:** `cartoon song` prints a table per part — key, loudness, brightness, bass,
+  note density, dynamics, stereo width, in words relative to the song. SKILL.md step 0 for clips: say
+  honestly that Claude cannot hear the song, give a short reading from the numbers, then ask the genre,
+  the lead instrument, the story and the ending.
+- **Staged review for long videos:** keyframes, then a draft of each part (`cartoon cut <part> --from
+  --to --size`), then the full render; every version the user saw is kept beside the new one.
+- **`cartoon frames --jumps`** no longer flags every camera move in 3D on twos (the baseline is the
+  median of the frames that changed); a frozen frame is explained as an exception (`cartoon check-hf`).
+- Palette `sky` (sunny sky with dramatic clouds); `storm`, `dusk` and `sky` have `red`, `black`, `white`
+  for insignia; `assets/themes.jpg` shows all 16 palettes (`cartoon palettes` lays them out in a square
+  grid). 13 new pitfalls (3D attitude, aiming, trails across cuts, clouds, palette before
+  geometry), a recipe "a duel in the sky", instrumentals and your own parts in `song-clip.md`.
+
 ## 1.1.0 — 2026-10-16
 
 Clips to a song.

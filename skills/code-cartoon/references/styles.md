@@ -92,6 +92,14 @@ Common to all hand-drawn styles:
 - Text: HTML over the canvas (GSAP tweens on the same timeline), Inter 800.
 - These are particles, geometry and logos — not characters with facial animation.
 
+## Coloured-pencil 3D — `engine/pencil3d.js`, palettes `sky`, `storm`, `dusk`
+- Real 3D meshes (bodies, airfoil wings, plates) projected onto the pencil canvas: flat sunlit fills,
+  coloured-pencil hatching on every face, cross-hatching in the shade, boiling outlines along
+  silhouettes and creases, on twos like the rest. Insignia and damage as decals.
+- Cumulus clouds from flattened bumpy puffs with a pencil rim on the sunlit tops; the sun behind.
+- Comes after a 2D pencil intro (an iris or a flash into the 3D world); the camera changes with the
+  parts (side, chase, over the tail, into the sun). Details: `pencil3d.md`.
+
 ## Photo + 3D — `--template photo3d`
 - A **real photo** with a living camera (slow Ken Burns), falling leaves in front (blurred near ones),
   a warm light leak, film grain, vignette: realism comes from the photo, not from 3D people.

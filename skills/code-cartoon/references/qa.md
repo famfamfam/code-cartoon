@@ -22,6 +22,11 @@ cartoon frames out.mp4 --jumps --cues cues.js                                  #
 the line boil (a pupil that jumps, a sprite that gets clipped, a texture that flickers).
 `--jumps` lists whole-frame changes that do not sit on a cue time.
 
+## A frozen frame means an exception
+If a snapshot or a render shows the same frame from some time on (or a black/empty world), the scene
+threw an error at that time and the page kept the last good picture. `cartoon check-hf` runs the
+HyperFrames checks and lists `page_error` with the message. Run it after every big change to `scene.js`.
+
 ## Checklist on the sheet
 - [ ] The story reads **without sound**: "it was -> twist -> it became" is clear from the sheet.
 - [ ] The first frame is not empty and not dark (it is the cover).
@@ -49,6 +54,12 @@ cartoon check out.mp4 --duration 10 --fps 24 --size 1080x1920
 Give `sheet.jpg` + the story to a separate agent that has not seen the code: "find everything that
 stops the story reading without sound, small text, clutter, jumps". Fix, shoot again. Ask the user
 first: it is an extra run.
+
+## Long videos: show it in stages
+For anything over ~30 s (a clip, a 3D world): keyframes first (`cartoon snapshot`), then each part as
+a draft (`cartoon cut <part> --from X --to Y --size 1920x1080`, render inside `cuts/<part>`), the
+full render only after the parts are approved. Keep every version beside the last one: `out-v3.mp4` +
+`versions/v3/` with the sources, never overwrite a version the user has seen.
 
 ## Say honestly what was not checked
 The sound was not listened to (metrics only) · frames between the checked ones were not viewed ·

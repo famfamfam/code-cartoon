@@ -28,6 +28,8 @@ Writes
   song.srt            subtitles (YouTube)
   song.map.png        bars, energy, parts, lines and the voice: look at it
   lyrics-preview.mp4  the song with karaoke lines and a playhead over the map: watch it before rendering
+Prints a reading of the music per part (key, loudness, brightness, bass, note density, dynamics, width):
+Claude cannot hear the song, so it states what the numbers suggest and asks the rest (SKILL.md, step 0).
 Pure numpy/scipy (+ ffmpeg). 4/4 time is assumed.
 """
 import argparse, json, re, shutil, subprocess, sys
@@ -685,6 +687,66 @@ def analyse(project, song, lyrics=None, vocals=None, lrc=None, bpm_min=60, bpm_m
     return info, lines, act, res, x, dur, notes
 
 
+# ------------------------------------------------------------------ reading the music
+NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+KS_MAJ = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88])
+KS_MIN = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
+
+
+def key_of(chroma):
+    """Krumhansl key profile: (name, correlation)"""
+    best = max(((np.corrcoef(chroma, np.roll(prof, r))[0, 1], f"{NOTE_NAMES[r]} {mode}") for r in range(12)
+                for mode, prof in (("major", KS_MAJ), ("minor", KS_MIN))), key=lambda c: c[0])
+    return best[1], best[0]
+
+
+def music_reading(project, song, info, x):
+    """What the numbers say about every part: key, loudness, brightness, bass, note density, dynamics, width.
+    Claude cannot hear the song: this is the base for a short reading to check with the user (SKILL.md, step 0)."""
+    edges = np.array(info["bars"])
+    chroma, _, _ = span_features(x, edges)
+    st = load_audio(project / song, SR, 2)
+    env, et = onset_strength(x, SR, 2048, 512)
+    cent, lowf, ct = [], [], []
+    f = np.fft.rfftfreq(4096, 1 / SR)
+    for times, mag in stft_chunks(x):
+        cent += list((mag * f).sum(axis=1) / (mag.sum(axis=1) + 1e-9))
+        lowf += list(mag[:, f < 150].sum(axis=1) / (mag.sum(axis=1) + 1e-9))
+        ct += list(times)
+    cent, lowf, ct = np.array(cent), np.array(lowf), np.array(ct)
+    rows = []
+    for sec in info["sections"]:
+        a, b = sec["t"], sec["end"]
+        i0, i1 = int(a * SR), int(b * SR)
+        seg, sseg = x[i0:i1], st[i0:i1]
+        if len(seg) < SR:
+            continue
+        rms = np.sqrt(np.mean(seg ** 2)) + 1e-9
+        m = (ct >= a) & (ct < b)
+        on = env[(et >= a) & (et < b)]
+        bars = (edges[:-1] >= a - 0.01) & (edges[:-1] < b - 0.01)
+        key, conf = key_of(chroma[bars].mean(axis=0)) if bars.any() else ("?", 0)
+        mid, side = sseg[:, 0] + sseg[:, 1], sseg[:, 0] - sseg[:, 1]
+        rows.append({"id": sec["id"], "t": a, "key": key, "conf": conf, "db": 20 * np.log10(rms), "bright": float(np.median(cent[m])) if m.any() else 0,
+                     "bass": float(np.mean(lowf[m]) * 100) if m.any() else 0, "notes": float((np.diff((on > 0.25).astype(int)) == 1).sum() / (b - a)),
+                     "crest": float(20 * np.log10(np.max(np.abs(seg)) / rms)), "width": float(np.std(side) / (np.std(mid) + 1e-9))})
+    if not rows:
+        return
+    avg = {k: np.median([r[k] for r in rows]) for k in ("db", "bright", "bass", "notes")}   # a quiet intro must not make every part "louder"
+    whole, _ = key_of(chroma.mean(axis=0))
+    print(f"  reading the music (numbers, not hearing): the whole song {whole}")
+    print("  part           key        loud   bright   bass  notes/s  dyn   width  -> relative to the song")
+    for r in rows:
+        words = []
+        words.append("louder" if r["db"] > avg["db"] + 1.0 else "quieter" if r["db"] < avg["db"] - 1.0 else "")
+        words.append("brighter" if r["bright"] > avg["bright"] * 1.12 else "darker" if r["bright"] < avg["bright"] * 0.88 else "")
+        words.append("heavier bass" if r["bass"] > avg["bass"] * 1.15 else "")
+        words.append("busier" if r["notes"] > avg["notes"] * 1.25 else "sparser" if r["notes"] < avg["notes"] * 0.75 else "")
+        print(f"  {r['id']:<13} {r['key']:<9} {r['db']:5.1f}dB {r['bright']:6.0f}Hz {r['bass']:5.1f}% {r['notes']:6.1f} {r['crest']:5.1f}dB {r['width']:5.2f}   {', '.join(w for w in words if w) or '-'}")
+    print("  -> say what this suggests (minor to the end = not a triumph; a darker, heavier part = weight, not relief),")
+    print("     then ask what numbers cannot tell: genre and lead instrument, the story it tells, how it should end")
+
+
 def suggest(info, lines, dur):
     secs = info["sections"]
     ch = [s for s in secs if s["label"] == "chorus"]
@@ -712,6 +774,7 @@ def main():
     ap.add_argument("--parts", help='your own parts: "intro:0,fight:41.8,storm:1:23.1,outro:138.3" (label:seconds or m:ss)')
     ap.add_argument("--auto-parts", action="store_true", help="forget the stored --parts: find the parts again")
     ap.add_argument("--no-preview", action="store_true")
+    ap.add_argument("--no-reading", action="store_true", help="skip the per-part reading of the music")
     ap.add_argument("--bpm-min", type=float, default=60)
     ap.add_argument("--bpm-max", type=float, default=190)
     a = ap.parse_args()
@@ -728,6 +791,7 @@ def main():
     lrc = None if a.auto else (adopt(project, a.lrc) or prev.get("lrc"))
     parts = None if a.auto_parts else (a.parts or prev.get("parts"))
     info, lines, act, res, x, dur, notes = analyse(project, song, lyrics, vocals, lrc, a.bpm_min, a.bpm_max, parts)
+    reading = (lambda: music_reading(project, song, info, x)) if not a.no_reading else (lambda: None)
     twist, poster = suggest(info, lines, dur)
     update_cues(cues_path, info, lines, dur, twist, poster)
     set_html_duration(project / "index.html", round(dur, 2))
@@ -759,6 +823,7 @@ def main():
     for m in notes:
         print("  ! " + m)
     print(f"  twist {twist:.2f}s, poster {poster:.2f}s; {len(lines)} lyric lines -> cues.js, audio/song.lrc, song.srt")
+    reading()
     print("  look: song.map.png" + ("; watch: lyrics-preview.mp4 (are the lines on time?)" if made else ""))
     print("  fix timing: edit audio/song.lrc, then: cartoon song --lrc audio/song.lrc   next: cartoon audio")
 

@@ -15,6 +15,31 @@ time; the song only supplies the times.
 - The full clip, a cut for Reels, or both; formats (16:9 full + 9:16 cut is the usual pair).
 - The worlds: which style for verses, which for the chorus (show `assets/themes.jpg`), the motif of the chorus.
 
+## Read the music before inventing the story
+You cannot hear the song. Say so, then give a short reading from the numbers and let the user correct it
+before any storyboard. `cartoon song` prints a table per part: key (major/minor), loudness, brightness,
+bass share, notes per second, dynamics and stereo width, with words relative to the whole song
+("louder, brighter", "darker, sparser"). Turn it into 3–5 sentences ("C minor all the way: tension,
+not a triumph; the fourth part is the heaviest; the end is darker and sparser: it fades out, not a
+final chord") and ask what numbers cannot tell, as one batch:
+- the genre and the lead instrument (a violin over electronics reads differently from a guitar riff);
+- the story the music tells: who, against whom or what, how it feels (in one sentence);
+- how it ends: victory, loss, a draw with respect, a fade into the distance;
+- what the cover or the title mean, if they gave one (often: only the palette and the mood).
+Then check your storyboard against the reading and say where they disagree: on the test track the first
+draft had a bright breakthrough over the darkest, heaviest part and a victory over a minor ending that
+fades out; both were wrong. The reading was right about the mood and the shape, and only the user could say
+"a duel of two WWII aces, both strong, wounded but not broken, respect at the end".
+
+## Instrumentals and your own parts
+- Without lyrics the parts come from the music alone. When the change is gradual (orchestral, cinematic),
+  the boundary search can cut the song into many short parts; above 10 parts it looks for the
+  changes between 4-bar phrases instead (parts of at least 8 bars).
+- Set the parts yourself when the user knows them or the map shows them clearly:
+  `cartoon song --parts "intro:0,fight:41.8,storm:1:23.1,clash:110.7,outro:138.3"` (label:seconds or
+  m:ss; snapped to the nearest bar). The parts are stored and kept on reruns; `--auto-parts` forgets them.
+- Every part is a world: `Sketch.songScenes` takes the labels you gave.
+
 ## Pipeline
 ```bash
 cartoon new my-clip --template clip --format 16:9 --palette neon --title "TITLE" --lang ru \
@@ -75,9 +100,17 @@ cartoon new my-clip --template clip --format 16:9 --palette neon --title "TITLE"
 - The outro is the poster: the title written, nothing fast moves.
 - A cut for Reels starts one bar before the chorus (the hook in the first 2 s) and ends with it.
 
+## Show it in stages
+A clip is long and the user wants to see it before 15 minutes of rendering: keyframes (one snapshot per
+part + the key moments), then each part as a draft (`cartoon cut fight --from 41.8 --to 83.1 --size
+1920x1080`, render inside `cuts/fight`), then the full render. Keep every version beside the last
+one (`clip-v2.mp4`, sources in `versions/v2/`). Camera cuts inside a part are planned jumps: add them
+as cue events (`{"id": "cut3", "t": 97.2}`) so `cartoon frames --jumps` checks only the rest.
+
 ## Render time
 Measured on a Windows laptop: the 46.5 s demo clip in 16:9 renders in ~3 minutes (about 4x the length),
-its 11 s 9:16 cut in 40 s — a 3-minute clip takes ~12 minutes. Check the parts with `cartoon snapshot`
+its 11 s 9:16 cut in 40 s — a 3-minute clip takes ~12 minutes. A clip with pencil 3D worlds (`references/pencil3d.md`) takes 4–6x
+the length: 2.5 minutes rendered in 11–16 minutes. Check the parts with `cartoon snapshot`
 first and render the cut before the full clip. A long render in segments that survives an interruption:
 `HF_SEGMENTED_CAPTURE=true cartoon render --output clip.mp4`; if it stops, the same command with
 `--resume` continues from the finished segments.

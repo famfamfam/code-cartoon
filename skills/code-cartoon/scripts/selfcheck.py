@@ -94,7 +94,7 @@ def main():
     # js syntax
     node = shutil.which("node")
     if node:
-        js = [SKILL / "assets/template/engine/sketch.js", SKILL / "assets/template/engine/palettes.js", SKILL / "assets/template/scene.js", SKILL / "assets/template/cues.js",
+        js = [SKILL / "assets/template/engine/sketch.js", SKILL / "assets/template/engine/pencil3d.js", SKILL / "assets/template/engine/palettes.js", SKILL / "assets/template/scene.js", SKILL / "assets/template/cues.js",
               SKILL / "assets/template-clip/scene.js", SKILL / "assets/template-clip/cues.js"]
         bad = [p.name for p in js if subprocess.run([node, "--check", str(p)], capture_output=True).returncode != 0]
         mods = [SKILL / "assets/template-3d/scene3d.js", SKILL / "assets/template-photo3d/scene3d.js", SKILL / "assets/template-photo3d/kit3d.js"]

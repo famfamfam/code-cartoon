@@ -1,8 +1,8 @@
 {
   "name": "code-cartoon",
   "displayName": "Code Cartoon",
-  "version": "1.1.0",
-  "description": "Animated videos made of code: hand-drawn, lubok and 3D styles rendered to MP4 with HyperFrames, synthesized sound, narration, beat sync and clips to your song with the lyrics on the beat. Everything runs locally.",
+  "version": "1.2.0",
+  "description": "Animated videos made of code: hand-drawn, lubok, glass and coloured-pencil 3D styles rendered to MP4 with HyperFrames, synthesized sound, narration, beat sync and clips to your song with the lyrics on the beat. Everything runs locally.",
   "author": { "name": "famfamfam", "url": "https://github.com/famfamfam" },
   "homepage": "https://github.com/famfamfam/code-cartoon",
   "repository": "https://github.com/famfamfam/code-cartoon",
